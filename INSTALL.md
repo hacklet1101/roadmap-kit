@@ -355,4 +355,4 @@ cd dashboard && npm install
 ## Support
 
 - **Issues**: https://github.com/hacklet1101/roadmap-kit/issues
-- **Documentation**: https://roadmap.ink/docs
+- **Documentation**: https://roadmap-kit.com/docs
