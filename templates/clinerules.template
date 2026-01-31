@@ -1,0 +1,130 @@
+# AI Development Rules
+
+## 📖 FIRST STEP - READ THE ROADMAP
+
+**BEFORE writing any code, you MUST read:**
+```
+roadmap-kit/roadmap.json
+```
+
+This file contains:
+- Project context, stack, and architecture
+- Shared resources (components, utilities, DB tables) - **DO NOT DUPLICATE**
+- Coding conventions specific to this project
+- Current features and tasks with detailed descriptions
+
+---
+
+## 📝 Code Conventions
+
+### Naming
+- **Variables & Functions**: `camelCase`
+- **Components/Classes**: `PascalCase`
+- **Constants**: `UPPER_SNAKE_CASE`
+- **Files**: `kebab-case` for utils, `PascalCase` for components
+- **CSS/Tailwind classes**: `kebab-case`
+
+### Best Practices
+- Keep functions small and focused (single responsibility)
+- Use descriptive names over comments
+- DRY - Don't Repeat Yourself (check shared_resources first)
+- Prefer composition over inheritance
+- Handle errors explicitly, never swallow them
+- Validate inputs at system boundaries
+
+### Code Quality
+- No magic numbers - use named constants
+- Avoid deep nesting (max 3 levels)
+- Early returns over nested conditionals
+- Explicit is better than implicit
+
+---
+
+## ♻️ SHARED RESOURCES - MANDATORY
+
+**Check `roadmap.json > project_info > shared_resources` BEFORE creating:**
+
+1. **UI Components** - Reuse existing buttons, inputs, modals, etc.
+2. **Utilities** - Use existing helpers, formatters, validators
+3. **Database Tables** - Don't create duplicate tables
+
+**RULE:** If it exists in shared_resources, you MUST use it.
+
+---
+
+## 🔖 Commit Format
+
+Use this format for automatic roadmap updates:
+
+```
+[task:TASK-ID] [status:STATUS] Description
+```
+
+**Examples:**
+```bash
+git commit -m "[task:auth-login] [status:completed] Implement JWT authentication"
+git commit -m "[task:user-api] [status:in_progress] Add user CRUD endpoints"
+git commit -m "[task:payment] [status:completed] [debt:Missing validation|high] Add payment processing"
+```
+
+**Available tags:**
+- `[task:id]` - Task ID from roadmap.json
+- `[status:pending|in_progress|completed]` - Task status
+- `[debt:description|severity|effort]` - Technical debt (severity: low/medium/high)
+
+---
+
+## ⚠️ Technical Debt Capture
+
+**You MUST register technical debt when:**
+- Skipping validation or error handling
+- Using workarounds or hacks
+- Leaving TODO comments
+- Not writing tests
+- Hardcoding values
+- Any "temporary" solutions
+
+**Severity Guide:**
+| Severity | When | Action Required |
+|----------|------|-----------------|
+| high | Security, data integrity | Fix ASAP |
+| medium | Functionality degraded | Fix soon |
+| low | Improvements, optimizations | When time allows |
+
+---
+
+## 📋 After Completing a Task
+
+Update `roadmap.json` with:
+
+1. **status**: "completed" or "in_progress"
+2. **ai_notes**: Your implementation decisions and reasoning
+3. **affected_files**: All files created or modified
+4. **reused_resources**: Components/utilities you reused
+5. **technical_debt**: Any debt you introduced
+
+---
+
+## ✅ Pre-Commit Checklist
+
+- [ ] Read the task description from roadmap.json?
+- [ ] Checked shared_resources for existing code?
+- [ ] Followed project conventions?
+- [ ] Updated roadmap.json with results?
+- [ ] Registered technical debt if any?
+- [ ] Used correct commit format?
+
+---
+
+## 🚫 DO NOT
+
+- Create duplicate components/utilities
+- Ignore project conventions
+- Commit without task tags
+- Leave undocumented technical debt
+- Refactor unrelated code
+- Skip reading the roadmap
+
+---
+
+**🗺️ ROADMAP-KIT** - AI needs context too.

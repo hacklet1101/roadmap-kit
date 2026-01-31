@@ -1,0 +1,30 @@
+# ROADMAP-KIT Docker Compose Configuration
+# Add this to your existing docker-compose.yml or use standalone
+
+version: '3.8'
+
+services:
+  roadmap-dashboard:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    container_name: roadmap-dashboard
+    ports:
+      - "${ROADMAP_PORT:-6969}:6969"
+    environment:
+      - PORT=6969
+    volumes:
+      # Mount .git directory (read-only) for scanner
+      - ../.git:/app/.git:ro
+      # Mount roadmap.json for sync
+      - ../roadmap.json:/app/roadmap.json
+      # Mount project root for file access
+      - ..:/project:ro
+    restart: unless-stopped
+      - NODE_ENV=development
+    networks:
+      - roadmap-network
+
+networks:
+  roadmap-network:
+    driver: bridge

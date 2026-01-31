@@ -1,0 +1,68 @@
+{
+  "name": "roadmap-kit",
+  "version": "1.0.0",
+  "description": "AI-powered project management for Vibe Coding. Track features, tasks, and technical debt with a visual dashboard.",
+  "main": "cli.js",
+  "type": "module",
+  "bin": {
+    "roadmap-kit": "./cli.js"
+  },
+  "files": [
+    "cli.js",
+    "scanner.js",
+    "setup.sh",
+    "dashboard/",
+    "templates/",
+    "docker/",
+    "!dashboard/node_modules",
+    "README.md",
+    "INSTALL.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "scan": "node scanner.js",
+    "dev": "cd dashboard && npm run dev",
+    "dev:scan": "node scanner.js && cd dashboard && npm run dev",
+    "build": "cd dashboard && npm run build",
+    "preview": "cd dashboard && npm run preview",
+    "postinstall": "echo '\\n🗺️  ROADMAP-KIT installed! Run: npx roadmap-kit init\\n'"
+  },
+  "keywords": [
+    "ai",
+    "vibe-coding",
+    "roadmap",
+    "project-management",
+    "claude",
+    "cursor",
+    "cline",
+    "windsurf",
+    "copilot",
+    "ai-coding",
+    "developer-tools",
+    "task-tracking",
+    "technical-debt"
+  ],
+  "author": {
+    "name": "HACKLET",
+    "url": "https://hacklet.es"
+  },
+  "license": "MIT",
+  "homepage": "https://roadmap.ink",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hacklet1101/roadmap-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hacklet1101/roadmap-kit/issues"
+  },
+  "dependencies": {
+    "simple-git": "^3.22.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

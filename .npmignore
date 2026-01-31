@@ -1,0 +1,27 @@
+# Dependencies (users will install fresh)
+node_modules/
+dashboard/node_modules/
+
+# Development files
+*.log
+.DS_Store
+.env
+.env.*
+
+# Generated files
+auth.json
+versions.json
+roadmap.json
+nginx-roadmap.conf
+docker-roadmap.yml
+
+# IDE
+.vscode/
+.idea/
+
+# Test files
+coverage/
+*.test.js
+
+# Build artifacts
+dashboard/dist/

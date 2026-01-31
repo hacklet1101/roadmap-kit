@@ -1,0 +1,268 @@
+{
+  "project_info": {
+    "name": "User Management System",
+    "version": "1.0.0",
+    "description": "Sistema completo de gestión de usuarios con autenticación JWT, roles y permisos.",
+    "purpose": "Permitir a administradores gestionar usuarios de la plataforma con control granular de permisos. Los usuarios normales solo pueden ver su propio perfil.",
+    "stack": ["Next.js 14", "Prisma", "PostgreSQL", "TailwindCSS", "TypeScript"],
+    "architecture": "Monorepo con App Router de Next.js. API routes en /app/api. Componentes reutilizables en /components/ui. Utilidades en /lib.",
+    "total_progress": 35,
+    "last_sync": "2026-01-31T10:00:00Z",
+    "conventions": {
+      "naming": {
+        "variables": "camelCase",
+        "components": "PascalCase",
+        "files": "kebab-case para utilidades, PascalCase.tsx para componentes",
+        "constants": "UPPER_SNAKE_CASE"
+      },
+      "file_structure": "Cada feature tiene su carpeta en /app con route.ts y page.tsx",
+      "database": "Usar Prisma con migraciones. NO crear tablas manualmente.",
+      "styling": "TailwindCSS únicamente. NO crear archivos CSS personalizados.",
+      "error_handling": "Usar lib/api-response.ts para respuestas consistentes"
+    },
+    "shared_resources": {
+      "ui_components": [
+        {
+          "path": "components/ui/Button.tsx",
+          "description": "Botón reutilizable con variantes (primary, secondary, danger)",
+          "usage": "import { Button } from '@/components/ui/Button'"
+        },
+        {
+          "path": "components/ui/Input.tsx",
+          "description": "Input con validación integrada",
+          "usage": "import { Input } from '@/components/ui/Input'"
+        },
+        {
+          "path": "components/ui/Modal.tsx",
+          "description": "Modal con overlay y animaciones",
+          "usage": "import { Modal } from '@/components/ui/Modal'"
+        },
+        {
+          "path": "components/ui/Table.tsx",
+          "description": "Tabla con paginación, ordenamiento y filtros",
+          "usage": "import { Table } from '@/components/ui/Table'"
+        }
+      ],
+      "utilities": [
+        {
+          "path": "lib/auth.ts",
+          "description": "Funciones de autenticación",
+          "exports": ["generateToken", "verifyPassword", "hashPassword", "verifyToken"],
+          "usage": "import { generateToken } from '@/lib/auth'",
+          "warning": null
+        },
+        {
+          "path": "lib/db.ts",
+          "description": "Cliente Prisma singleton",
+          "exports": ["prisma"],
+          "usage": "import { prisma } from '@/lib/db'",
+          "warning": "NO crear nuevas instancias de PrismaClient"
+        },
+        {
+          "path": "lib/i18n.ts",
+          "description": "Gestión de idiomas",
+          "exports": ["useTranslation", "t"],
+          "usage": "const { t } = useTranslation()",
+          "warning": null
+        },
+        {
+          "path": "lib/api-response.ts",
+          "description": "Respuestas estandarizadas de API",
+          "exports": ["apiSuccess", "apiError"],
+          "usage": "return apiError('Invalid credentials', 401)",
+          "warning": null
+        }
+      ],
+      "database_tables": [
+        {
+          "name": "User",
+          "fields": ["id", "email", "password", "role", "createdAt", "updatedAt"],
+          "description": "Tabla principal de usuarios. NO crear duplicados."
+        },
+        {
+          "name": "Session",
+          "fields": ["id", "userId", "token", "expiresAt"],
+          "description": "Sesiones activas con tokens JWT"
+        }
+      ]
+    }
+  },
+  "features": [
+    {
+      "id": "auth",
+      "name": "Autenticación",
+      "description": "Sistema de login/logout con JWT y refresh tokens. Incluye validación de credenciales, generación de tokens y manejo de sesiones.",
+      "status": "in_progress",
+      "progress": 50,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "auth-db-schema",
+          "name": "Diseño de tabla de usuarios",
+          "description": "Crear schema Prisma con User y Session. IMPORTANTE: Usar tabla User existente, NO crear nueva. Añadir índices en email para búsquedas rápidas.",
+          "status": "completed",
+          "priority": "high",
+          "ai_notes": "Se usó Prisma con campos email (unique) y password (hashed con bcrypt). Se añadió índice en email para búsquedas rápidas. Se decidió usar bcrypt con 10 rounds por balance entre seguridad y performance.",
+          "affected_files": [
+            "prisma/schema.prisma",
+            "prisma/migrations/20260130_create_users.sql"
+          ],
+          "reused_resources": [],
+          "git": {
+            "branch": "feature/auth-db",
+            "pr_number": 1,
+            "pr_url": "https://github.com/user/repo/pull/1",
+            "last_commit": "7a2b3c4d5e6f7g8h9i0j",
+            "commits": ["7a2b3c4d5e6f7g8h9i0j"]
+          },
+          "metrics": {
+            "lines_added": 45,
+            "lines_removed": 0,
+            "files_created": 2,
+            "files_modified": 0,
+            "complexity_score": 2
+          },
+          "technical_debt": [],
+          "started_at": "2026-01-29T14:00:00Z",
+          "completed_at": "2026-01-30T10:30:00Z"
+        },
+        {
+          "id": "auth-login-api",
+          "name": "API de Login con JWT",
+          "description": "Endpoint POST /api/auth/login. Validar con Zod. IMPORTANTE: Usar lib/auth.ts para generar tokens. NO duplicar lógica de JWT. Retornar token y refresh token.",
+          "status": "in_progress",
+          "priority": "high",
+          "ai_notes": "Implementando validación con Zod para email y password. Reutilizando generateToken() y verifyPassword() de lib/auth.ts. Manejo de errores con try-catch y respuestas JSON estándar usando apiError() de lib/api-response.ts. Se decidió usar cookies httpOnly para el refresh token por seguridad.",
+          "affected_files": [
+            "src/app/api/auth/login/route.ts",
+            "lib/auth.ts"
+          ],
+          "reused_resources": [
+            "lib/auth.ts (generateToken, verifyPassword)",
+            "lib/db.ts (prisma client)",
+            "lib/api-response.ts (apiError, apiSuccess)"
+          ],
+          "git": {
+            "branch": "feature/auth-api",
+            "pr_number": 2,
+            "pr_url": "https://github.com/user/repo/pull/2",
+            "last_commit": "9f8e7d6c5b4a3g2h1i0j",
+            "commits": ["9f8e7d6c5b4a3g2h1i0j", "8e7d6c5b4a3g2h1i0j9f"]
+          },
+          "metrics": {
+            "lines_added": 120,
+            "lines_removed": 5,
+            "files_created": 1,
+            "files_modified": 1,
+            "complexity_score": 5
+          },
+          "technical_debt": [
+            {
+              "description": "Falta implementar rate limiting para evitar brute force attacks",
+              "severity": "high",
+              "estimated_effort": "2 hours"
+            },
+            {
+              "description": "Los errores deberían usar un sistema centralizado de logging (Winston o Pino)",
+              "severity": "medium",
+              "estimated_effort": "4 hours"
+            }
+          ],
+          "started_at": "2026-01-30T11:00:00Z",
+          "completed_at": null
+        },
+        {
+          "id": "auth-logout-api",
+          "name": "API de Logout",
+          "description": "Endpoint POST /api/auth/logout. Invalidar token en base de datos (tabla Session). Limpiar cookies.",
+          "status": "pending",
+          "priority": "medium",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": [],
+          "git": {
+            "branch": null,
+            "pr_number": null,
+            "pr_url": null,
+            "last_commit": null,
+            "commits": []
+          },
+          "metrics": {
+            "lines_added": 0,
+            "lines_removed": 0,
+            "files_created": 0,
+            "files_modified": 0,
+            "complexity_score": 0
+          },
+          "technical_debt": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    },
+    {
+      "id": "user-management",
+      "name": "Gestión de Usuarios",
+      "description": "CRUD completo de usuarios con listado, creación, edición y eliminación. Incluye validación de permisos.",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "user-list",
+          "name": "Listado de usuarios",
+          "description": "Página con tabla de usuarios. IMPORTANTE: Usar components/ui/Table.tsx existente. Incluir paginación, búsqueda y filtros por rol.",
+          "status": "pending",
+          "priority": "high",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": [],
+          "git": {
+            "branch": null,
+            "pr_number": null,
+            "pr_url": null,
+            "last_commit": null,
+            "commits": []
+          },
+          "metrics": {
+            "lines_added": 0,
+            "lines_removed": 0,
+            "files_created": 0,
+            "files_modified": 0,
+            "complexity_score": 0
+          },
+          "technical_debt": [],
+          "started_at": null,
+          "completed_at": null
+        },
+        {
+          "id": "user-create",
+          "name": "Crear usuario",
+          "description": "Formulario para crear nuevos usuarios. IMPORTANTE: Usar components/ui/Input.tsx y Button.tsx. Validar email único.",
+          "status": "pending",
+          "priority": "high",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": [],
+          "git": {
+            "branch": null,
+            "pr_number": null,
+            "pr_url": null,
+            "last_commit": null,
+            "commits": []
+          },
+          "metrics": {
+            "lines_added": 0,
+            "lines_removed": 0,
+            "files_created": 0,
+            "files_modified": 0,
+            "complexity_score": 0
+          },
+          "technical_debt": [],
+          "started_at": null,
+          "completed_at": null
+        }
+      ]
+    }
+  ]
+}

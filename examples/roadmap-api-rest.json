@@ -1,0 +1,213 @@
+{
+  "project_info": {
+    "name": "API de Gestion de Tareas",
+    "version": "1.0.0",
+    "description": "API REST para gestion de tareas y proyectos con autenticacion JWT",
+    "purpose": "Backend para aplicacion de gestion de tareas. Permite crear proyectos, asignar tareas a usuarios y trackear progreso.",
+    "stack": ["Node.js", "Express.js", "MongoDB", "Mongoose", "JWT", "Jest"],
+    "architecture": "API REST con Express. Autenticacion via JWT en headers. MongoDB para persistencia. Estructura MVC (routes -> controllers -> services -> models).",
+    "total_progress": 0,
+    "last_sync": null,
+    "conventions": {
+      "naming": {
+        "routes": "kebab-case (/api/user-tasks)",
+        "controllers": "camelCase (getUserTasks)",
+        "models": "PascalCase (UserTask)",
+        "files": "kebab-case.js"
+      },
+      "file_structure": "routes/ -> controllers/ -> services/ -> models/. Middleware en middleware/. Utils en utils/.",
+      "database": "MongoDB con Mongoose. Schemas en models/. Indices definidos en el schema.",
+      "styling": "N/A - Solo backend",
+      "error_handling": "Middleware centralizado en middleware/error-handler.js. Usar utils/api-error.js para errores custom."
+    },
+    "shared_resources": {
+      "ui_components": [],
+      "utilities": [
+        {
+          "path": "middleware/auth.js",
+          "description": "Middleware de autenticacion JWT",
+          "exports": ["requireAuth", "optionalAuth", "requireRole"],
+          "usage": "router.get('/protected', requireAuth, controller.method)",
+          "warning": "requireRole recibe un array de roles permitidos"
+        },
+        {
+          "path": "utils/api-error.js",
+          "description": "Clase para errores de API",
+          "exports": ["ApiError"],
+          "usage": "throw new ApiError('No encontrado', 404)"
+        },
+        {
+          "path": "utils/response.js",
+          "description": "Funciones para respuestas estandarizadas",
+          "exports": ["success", "paginated"],
+          "usage": "return success(res, data, 'Usuario creado', 201)"
+        },
+        {
+          "path": "utils/validators.js",
+          "description": "Validadores con Joi",
+          "exports": ["validateBody", "validateQuery", "schemas"],
+          "usage": "router.post('/', validateBody(schemas.createUser), controller)"
+        },
+        {
+          "path": "services/email.js",
+          "description": "Servicio de envio de emails",
+          "exports": ["sendEmail", "sendWelcomeEmail", "sendPasswordReset"],
+          "usage": "await sendWelcomeEmail(user.email, user.name)"
+        }
+      ],
+      "database_tables": [
+        {
+          "name": "users",
+          "fields": ["_id", "email", "password", "name", "role", "isActive", "createdAt"],
+          "description": "Usuarios del sistema. role: user, admin. password hasheado con bcrypt."
+        },
+        {
+          "name": "projects",
+          "fields": ["_id", "name", "description", "ownerId", "members", "status", "createdAt"],
+          "description": "Proyectos. members es array de userIds. status: active, archived."
+        },
+        {
+          "name": "tasks",
+          "fields": ["_id", "projectId", "title", "description", "assigneeId", "status", "priority", "dueDate"],
+          "description": "Tareas. status: todo, in_progress, done. priority: low, medium, high."
+        }
+      ]
+    }
+  },
+  "features": [
+    {
+      "id": "auth",
+      "name": "Autenticacion",
+      "description": "Registro, login y gestion de sesiones con JWT",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "auth-register",
+          "name": "Registro de usuarios",
+          "description": "POST /api/auth/register. Body: {email, password, name}. Hashear password con bcrypt (10 rounds). Enviar email de bienvenida con services/email.js.",
+          "status": "pending",
+          "priority": "high",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": []
+        },
+        {
+          "id": "auth-login",
+          "name": "Login",
+          "description": "POST /api/auth/login. Body: {email, password}. Retornar {token, user}. Token expira en 7d.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "auth-me",
+          "name": "Obtener usuario actual",
+          "description": "GET /api/auth/me. Requiere auth. Retornar datos del usuario del token.",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "auth-password-reset",
+          "name": "Reset de password",
+          "description": "POST /api/auth/forgot-password y POST /api/auth/reset-password. Enviar email con token temporal.",
+          "status": "pending",
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "projects",
+      "name": "Gestion de Proyectos",
+      "description": "CRUD de proyectos y gestion de miembros",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "projects-crud",
+          "name": "CRUD de proyectos",
+          "description": "GET/POST/PUT/DELETE /api/projects. Solo el owner puede editar/eliminar. USAR utils/response.js para respuestas.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "projects-members",
+          "name": "Gestion de miembros",
+          "description": "POST /api/projects/:id/members (agregar). DELETE /api/projects/:id/members/:userId (quitar). Solo owner puede gestionar.",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "projects-list-mine",
+          "name": "Listar mis proyectos",
+          "description": "GET /api/projects/mine. Retornar proyectos donde soy owner o member. Incluir paginacion.",
+          "status": "pending",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "name": "Gestion de Tareas",
+      "description": "CRUD de tareas dentro de proyectos",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "tasks-crud",
+          "name": "CRUD de tareas",
+          "description": "GET/POST/PUT/DELETE /api/projects/:projectId/tasks. Validar que usuario es miembro del proyecto.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "tasks-assign",
+          "name": "Asignar tarea",
+          "description": "PUT /api/tasks/:id/assign. Body: {assigneeId}. Solo asignar a miembros del proyecto.",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "tasks-status",
+          "name": "Cambiar status",
+          "description": "PUT /api/tasks/:id/status. Body: {status}. Solo el assignee o el owner del proyecto pueden cambiar.",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "tasks-filters",
+          "name": "Filtros de tareas",
+          "description": "GET /api/tasks con query params: status, priority, assigneeId, projectId. Paginacion incluida.",
+          "status": "pending",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "name": "Notificaciones",
+      "description": "Sistema de notificaciones por email",
+      "status": "pending",
+      "progress": 0,
+      "priority": "low",
+      "tasks": [
+        {
+          "id": "notifications-task-assigned",
+          "name": "Email al asignar tarea",
+          "description": "Enviar email cuando se asigna una tarea. USAR services/email.js",
+          "status": "pending",
+          "priority": "low"
+        },
+        {
+          "id": "notifications-due-date",
+          "name": "Recordatorio de fecha limite",
+          "description": "Cron job diario. Enviar email a assignees con tareas que vencen en 24h.",
+          "status": "pending",
+          "priority": "low"
+        }
+      ]
+    }
+  ]
+}

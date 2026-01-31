@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "name": "[PROJECT_NAME]",
+    "version": "1.0.0",
+    "description": "[PROJECT_DESCRIPTION]",
+    "purpose": "[PROJECT_PURPOSE]",
+    "stack": [],
+    "architecture": "[ARCHITECTURE_DESCRIPTION]",
+    "total_progress": 0,
+    "last_sync": null,
+    "conventions": {
+      "naming": {
+        "variables": "camelCase",
+        "components": "PascalCase",
+        "files": "kebab-case for utilities, PascalCase.tsx for components",
+        "constants": "UPPER_SNAKE_CASE"
+      },
+      "file_structure": "[FILE_STRUCTURE_DESCRIPTION]",
+      "database": "[DATABASE_CONVENTIONS]",
+      "styling": "[STYLING_CONVENTIONS]",
+      "error_handling": "[ERROR_HANDLING_CONVENTIONS]"
+    },
+    "shared_resources": {
+      "ui_components": [],
+      "utilities": [],
+      "database_tables": []
+    }
+  },
+  "features": []
+}

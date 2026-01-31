@@ -1,0 +1,47 @@
+import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+import { cn } from "../../lib/utils"
+
+const Tabs = TabsPrimitive.Root
+
+const TabsList = React.forwardRef(({ className, ...props }, ref) => (
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(
+      "inline-flex h-auto items-center justify-center rounded-xl bg-navy-900/80 backdrop-blur-sm p-1.5 text-slate-400 border border-cyan-500/10",
+      className
+    )}
+    {...props}
+  />
+))
+TabsList.displayName = TabsPrimitive.List.displayName
+
+const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "inline-flex items-center justify-center whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50",
+      "disabled:pointer-events-none disabled:opacity-50",
+      "data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400 data-[state=active]:shadow-sm",
+      "hover:text-slate-300 hover:bg-navy-800/50",
+      className
+    )}
+    {...props}
+  />
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
+
+const TabsContent = React.forwardRef(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn(
+      "mt-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/50",
+      className
+    )}
+    {...props}
+  />
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
+
+export { Tabs, TabsList, TabsTrigger, TabsContent }

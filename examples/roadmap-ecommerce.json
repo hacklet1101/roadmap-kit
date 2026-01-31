@@ -1,0 +1,244 @@
+{
+  "project_info": {
+    "name": "TiendaOnline",
+    "version": "1.0.0",
+    "description": "Plataforma e-commerce completa con carrito, pagos y gestion de pedidos",
+    "purpose": "Permitir a usuarios comprar productos online con pagos seguros via Stripe. Los administradores pueden gestionar inventario y pedidos.",
+    "stack": ["Next.js 14", "Prisma", "PostgreSQL", "Stripe", "TailwindCSS", "TypeScript"],
+    "architecture": "Monorepo con App Router de Next.js. API routes en /app/api. Componentes reutilizables en /components/ui. Pagos procesados via Stripe Checkout.",
+    "total_progress": 0,
+    "last_sync": null,
+    "conventions": {
+      "naming": {
+        "variables": "camelCase",
+        "components": "PascalCase",
+        "files": "kebab-case para utilidades, PascalCase.tsx para componentes",
+        "constants": "UPPER_SNAKE_CASE"
+      },
+      "file_structure": "Cada feature tiene su carpeta en /app. Componentes compartidos en /components/ui.",
+      "database": "Usar Prisma con migraciones. NO crear tablas manualmente. Siempre usar transacciones para operaciones de pago.",
+      "styling": "TailwindCSS unicamente. NO crear archivos CSS personalizados.",
+      "error_handling": "Usar lib/api-response.ts para respuestas consistentes. Loggear errores con lib/logger.ts"
+    },
+    "shared_resources": {
+      "ui_components": [
+        {
+          "path": "components/ui/Button.tsx",
+          "description": "Boton reutilizable con variantes (primary, secondary, danger, outline)",
+          "usage": "import { Button } from '@/components/ui/Button'"
+        },
+        {
+          "path": "components/ui/ProductCard.tsx",
+          "description": "Tarjeta de producto con imagen, precio y boton de agregar",
+          "usage": "<ProductCard product={product} onAddToCart={handleAdd} />"
+        },
+        {
+          "path": "components/ui/Modal.tsx",
+          "description": "Modal con overlay y animaciones",
+          "usage": "<Modal isOpen={open} onClose={close}>{children}</Modal>"
+        },
+        {
+          "path": "components/ui/Input.tsx",
+          "description": "Input con label, error y validacion",
+          "usage": "<Input label='Email' error={errors.email} {...register('email')} />"
+        }
+      ],
+      "utilities": [
+        {
+          "path": "lib/stripe.ts",
+          "description": "Cliente de Stripe y funciones de pago",
+          "exports": ["stripe", "createCheckoutSession", "verifyWebhook"],
+          "usage": "import { createCheckoutSession } from '@/lib/stripe'",
+          "warning": "NUNCA exponer la API key de Stripe en el cliente"
+        },
+        {
+          "path": "lib/db.ts",
+          "description": "Cliente Prisma singleton",
+          "exports": ["prisma"],
+          "usage": "import { prisma } from '@/lib/db'",
+          "warning": "NO crear nuevas instancias de PrismaClient"
+        },
+        {
+          "path": "lib/cart.ts",
+          "description": "Funciones del carrito (localStorage)",
+          "exports": ["getCart", "addToCart", "removeFromCart", "clearCart"],
+          "usage": "import { addToCart } from '@/lib/cart'"
+        },
+        {
+          "path": "lib/api-response.ts",
+          "description": "Respuestas estandarizadas de API",
+          "exports": ["apiSuccess", "apiError"],
+          "usage": "return apiError('Producto no encontrado', 404)"
+        }
+      ],
+      "database_tables": [
+        {
+          "name": "Product",
+          "fields": ["id", "name", "description", "price", "stock", "imageUrl", "categoryId", "createdAt"],
+          "description": "Productos del catalogo. price en centavos."
+        },
+        {
+          "name": "Category",
+          "fields": ["id", "name", "slug"],
+          "description": "Categorias de productos"
+        },
+        {
+          "name": "Order",
+          "fields": ["id", "userId", "status", "total", "stripeSessionId", "createdAt"],
+          "description": "Pedidos. status: pending, paid, shipped, delivered, cancelled"
+        },
+        {
+          "name": "OrderItem",
+          "fields": ["id", "orderId", "productId", "quantity", "priceAtPurchase"],
+          "description": "Items de cada pedido. Guardar precio al momento de compra."
+        },
+        {
+          "name": "User",
+          "fields": ["id", "email", "name", "role", "createdAt"],
+          "description": "Usuarios. role: customer, admin"
+        }
+      ]
+    }
+  },
+  "features": [
+    {
+      "id": "catalog",
+      "name": "Catalogo de Productos",
+      "description": "Listado, busqueda y filtrado de productos con categorias",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "catalog-list",
+          "name": "Listado de productos",
+          "description": "Pagina /productos con grid de ProductCard. Incluir paginacion (12 productos por pagina). USAR components/ui/ProductCard.tsx existente.",
+          "status": "pending",
+          "priority": "high",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": [],
+          "git": { "branch": null, "pr_number": null, "pr_url": null, "last_commit": null, "commits": [] },
+          "metrics": { "lines_added": 0, "lines_removed": 0, "files_created": 0, "files_modified": 0, "complexity_score": 0 },
+          "technical_debt": []
+        },
+        {
+          "id": "catalog-search",
+          "name": "Busqueda de productos",
+          "description": "Barra de busqueda con debounce (300ms). Buscar por nombre y descripcion. Mostrar resultados en tiempo real.",
+          "status": "pending",
+          "priority": "medium",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": []
+        },
+        {
+          "id": "catalog-filters",
+          "name": "Filtros por categoria y precio",
+          "description": "Sidebar con filtros: categoria (checkboxes), rango de precio (slider). Mantener filtros en URL params.",
+          "status": "pending",
+          "priority": "medium",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": []
+        },
+        {
+          "id": "catalog-detail",
+          "name": "Pagina de detalle de producto",
+          "description": "Pagina /productos/[id] con imagen grande, descripcion, precio, stock y boton agregar al carrito.",
+          "status": "pending",
+          "priority": "high",
+          "ai_notes": "",
+          "affected_files": [],
+          "reused_resources": []
+        }
+      ]
+    },
+    {
+      "id": "cart",
+      "name": "Carrito de Compras",
+      "description": "Gestion del carrito con persistencia en localStorage",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "cart-add",
+          "name": "Agregar al carrito",
+          "description": "Funcion addToCart en lib/cart.ts. Validar stock disponible antes de agregar. Mostrar toast de confirmacion.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "cart-page",
+          "name": "Pagina del carrito",
+          "description": "Pagina /carrito con lista de items, cantidades editables, subtotales y total. Boton para proceder al pago.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "cart-icon",
+          "name": "Icono del carrito en header",
+          "description": "Icono con badge mostrando cantidad de items. Click abre drawer o navega a /carrito.",
+          "status": "pending",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "checkout",
+      "name": "Proceso de Pago",
+      "description": "Checkout con Stripe",
+      "status": "pending",
+      "progress": 0,
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "checkout-stripe",
+          "name": "Integracion con Stripe Checkout",
+          "description": "Crear Checkout Session con los items del carrito. USAR lib/stripe.ts (createCheckoutSession). Redirigir a Stripe.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "checkout-webhook",
+          "name": "Webhook de Stripe",
+          "description": "Endpoint POST /api/webhooks/stripe. Verificar firma. Crear Order en DB cuando payment_intent.succeeded.",
+          "status": "pending",
+          "priority": "high"
+        },
+        {
+          "id": "checkout-success",
+          "name": "Pagina de exito",
+          "description": "Pagina /checkout/success. Mostrar resumen del pedido. Limpiar carrito.",
+          "status": "pending",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "name": "Panel de Administracion",
+      "description": "CRUD de productos y gestion de pedidos para admins",
+      "status": "pending",
+      "progress": 0,
+      "priority": "medium",
+      "tasks": [
+        {
+          "id": "admin-products",
+          "name": "Gestion de productos",
+          "description": "Pagina /admin/productos con tabla, crear, editar y eliminar productos. Solo accesible para role=admin.",
+          "status": "pending",
+          "priority": "medium"
+        },
+        {
+          "id": "admin-orders",
+          "name": "Gestion de pedidos",
+          "description": "Pagina /admin/pedidos con lista de pedidos. Poder cambiar status (shipped, delivered).",
+          "status": "pending",
+          "priority": "medium"
+        }
+      ]
+    }
+  ]
+}

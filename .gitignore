@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+dashboard/node_modules/
+
+# Environment variables (contain credentials)
+.env
+.env.local
+.env.production
+
+# Build output
+dashboard/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+auth.json
+versions.json
+roadmap.json
+.npmrc
