@@ -7,10 +7,11 @@
  */
 
 import { Command } from 'commander';
-import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'fs';
-import { join, dirname } from 'path';
+import { readFileSync, writeFileSync, existsSync, copyFileSync, readdirSync, statSync } from 'fs';
+import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { execSync, spawn } from 'child_process';
+import net from 'net';
 import chalk from 'chalk';
 import ora from 'ora';
 import { scanGitHistory } from './scanner.js';
@@ -18,6 +19,530 @@ import { scanGitHistory } from './scanner.js';
 // Get current directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const DEFAULT_PORT = 6969;
+
+/**
+ * Technology detection patterns by category
+ * Maps package names/files to readable technology names
+ */
+const TECH_DETECTION = {
+  // Frontend Frameworks
+  frameworks: {
+    'react': 'React',
+    'react-dom': 'React',
+    'next': 'Next.js',
+    'vue': 'Vue',
+    'nuxt': 'Nuxt',
+    'svelte': 'Svelte',
+    '@sveltejs/kit': 'SvelteKit',
+    'express': 'Express',
+    '@nestjs/core': 'NestJS',
+    'fastify': 'Fastify',
+    '@angular/core': 'Angular',
+    'astro': 'Astro',
+    '@remix-run/react': 'Remix'
+  },
+  // Databases & ORMs
+  databases: {
+    'prisma': 'Prisma',
+    '@prisma/client': 'Prisma',
+    'typeorm': 'TypeORM',
+    'sequelize': 'Sequelize',
+    'mongoose': 'Mongoose',
+    'drizzle-orm': 'Drizzle',
+    'knex': 'Knex',
+    'pg': 'PostgreSQL',
+    'mysql2': 'MySQL',
+    'better-sqlite3': 'SQLite',
+    'mongodb': 'MongoDB',
+    'redis': 'Redis',
+    'ioredis': 'Redis',
+    '@supabase/supabase-js': 'Supabase',
+    'firebase': 'Firebase',
+    'firebase-admin': 'Firebase'
+  },
+  // Styling
+  styling: {
+    'tailwindcss': 'TailwindCSS',
+    'styled-components': 'Styled Components',
+    '@emotion/react': 'Emotion',
+    'sass': 'SCSS',
+    '@mui/material': 'Material UI',
+    'antd': 'Ant Design',
+    '@chakra-ui/react': 'Chakra UI',
+    'bootstrap': 'Bootstrap'
+  },
+  // Testing
+  testing: {
+    'jest': 'Jest',
+    'vitest': 'Vitest',
+    'mocha': 'Mocha',
+    '@playwright/test': 'Playwright',
+    'cypress': 'Cypress',
+    '@testing-library/react': 'Testing Library'
+  },
+  // Build Tools
+  build: {
+    'vite': 'Vite',
+    'webpack': 'Webpack',
+    'esbuild': 'esbuild',
+    'parcel': 'Parcel',
+    'rollup': 'Rollup',
+    'turbo': 'Turborepo'
+  },
+  // Developer Tools
+  tools: {
+    'typescript': 'TypeScript',
+    'eslint': 'ESLint',
+    'prettier': 'Prettier',
+    'husky': 'Husky',
+    'zod': 'Zod',
+    'axios': 'Axios',
+    'graphql': 'GraphQL',
+    '@trpc/server': 'tRPC',
+    'socket.io': 'Socket.io'
+  },
+  // Python (detected from requirements.txt)
+  python: {
+    'django': 'Django',
+    'flask': 'Flask',
+    'fastapi': 'FastAPI',
+    'sqlalchemy': 'SQLAlchemy',
+    'pytest': 'Pytest',
+    'celery': 'Celery'
+  }
+};
+
+/**
+ * Configuration files to detect
+ */
+const CONFIG_PATTERNS = [
+  'tsconfig.json',
+  '.eslintrc',
+  '.eslintrc.js',
+  '.eslintrc.json',
+  'eslint.config.js',
+  'prettier.config.js',
+  '.prettierrc',
+  '.prettierrc.js',
+  'tailwind.config.js',
+  'tailwind.config.ts',
+  'vite.config.js',
+  'vite.config.ts',
+  'webpack.config.js',
+  'next.config.js',
+  'next.config.mjs',
+  'prisma/schema.prisma',
+  'Dockerfile',
+  'docker-compose.yml',
+  'docker-compose.yaml',
+  '.env',
+  '.env.local',
+  '.env.example'
+];
+
+/**
+ * Check if a port is available
+ * @param {number} port - Port to check
+ * @returns {Promise<boolean>} - True if port is available
+ */
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+
+    server.once('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        resolve(false);
+      } else {
+        resolve(false);
+      }
+    });
+
+    server.once('listening', () => {
+      server.close();
+      resolve(true);
+    });
+
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+/**
+ * Find an available port starting from startPort
+ * @param {number} startPort - Port to start searching from
+ * @param {number} maxAttempts - Maximum number of ports to try
+ * @returns {Promise<number>} - Available port number
+ */
+async function findAvailablePort(startPort = DEFAULT_PORT, maxAttempts = 10) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const port = startPort + i;
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`No available port found between ${startPort} and ${startPort + maxAttempts - 1}`);
+}
+
+/**
+ * Detect folder structure pattern
+ * @param {string} projectRoot - Project root directory
+ * @returns {string} - Detected pattern (feature-based, layer-based, app-router, mixed, flat)
+ */
+function detectFolderPattern(projectRoot) {
+  const srcPath = join(projectRoot, 'src');
+  const appPath = join(projectRoot, 'app');
+
+  // Check for Next.js app router
+  if (existsSync(appPath)) {
+    try {
+      const appContents = readdirSync(appPath);
+      if (appContents.some(f => f.startsWith('(') || f === 'layout.tsx' || f === 'layout.js')) {
+        return 'app-router';
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  if (!existsSync(srcPath)) {
+    return 'flat';
+  }
+
+  try {
+    const srcContents = readdirSync(srcPath);
+    const dirs = srcContents.filter(f => {
+      try {
+        return statSync(join(srcPath, f)).isDirectory();
+      } catch (e) {
+        return false;
+      }
+    });
+
+    // Layer-based patterns
+    const layerPatterns = ['controllers', 'services', 'models', 'repositories', 'routes', 'middleware'];
+    const hasLayerPattern = dirs.some(d => layerPatterns.includes(d.toLowerCase()));
+
+    // Feature-based patterns
+    const featurePatterns = ['features', 'modules', 'domains'];
+    const hasFeaturePattern = dirs.some(d => featurePatterns.includes(d.toLowerCase()));
+
+    // Common mixed patterns
+    const commonDirs = ['components', 'lib', 'utils', 'hooks', 'styles', 'pages', 'api'];
+    const hasCommonDirs = dirs.some(d => commonDirs.includes(d.toLowerCase()));
+
+    if (hasFeaturePattern) return 'feature-based';
+    if (hasLayerPattern) return 'layer-based';
+    if (hasCommonDirs && dirs.length > 3) return 'mixed';
+    return 'flat';
+  } catch (e) {
+    return 'flat';
+  }
+}
+
+/**
+ * Scan for shared resources (UI components, utilities, DB tables)
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} - { ui_components, utilities, database_tables }
+ */
+function scanSharedResources(projectRoot) {
+  const resources = {
+    ui_components: [],
+    utilities: [],
+    database_tables: []
+  };
+
+  // Common paths for components
+  const componentPaths = [
+    join(projectRoot, 'src', 'components'),
+    join(projectRoot, 'src', 'components', 'ui'),
+    join(projectRoot, 'components'),
+    join(projectRoot, 'app', 'components')
+  ];
+
+  // Common paths for utilities
+  const utilityPaths = [
+    join(projectRoot, 'src', 'lib'),
+    join(projectRoot, 'src', 'utils'),
+    join(projectRoot, 'lib'),
+    join(projectRoot, 'utils')
+  ];
+
+  // Scan for UI components
+  for (const compPath of componentPaths) {
+    if (existsSync(compPath)) {
+      try {
+        const files = readdirSync(compPath);
+        for (const file of files) {
+          if (file.match(/\.(jsx|tsx)$/) && !file.includes('.test.') && !file.includes('.spec.')) {
+            const fullPath = join(compPath, file);
+            try {
+              if (statSync(fullPath).isFile()) {
+                const relativePath = fullPath.replace(projectRoot + '/', '');
+                const name = basename(file, file.includes('.tsx') ? '.tsx' : '.jsx');
+                resources.ui_components.push({
+                  path: relativePath,
+                  description: `${name} component`,
+                  usage: `import { ${name} } from '@/${relativePath.replace(/\.(jsx|tsx)$/, '')}'`
+                });
+              }
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  // Scan for utilities
+  for (const utilPath of utilityPaths) {
+    if (existsSync(utilPath)) {
+      try {
+        const files = readdirSync(utilPath);
+        for (const file of files) {
+          if (file.match(/\.(js|ts)$/) && !file.match(/\.(d\.ts|test\.|spec\.)/) && !file.includes('index')) {
+            const fullPath = join(utilPath, file);
+            try {
+              if (statSync(fullPath).isFile()) {
+                const relativePath = fullPath.replace(projectRoot + '/', '');
+                const name = basename(file, file.includes('.ts') ? '.ts' : '.js');
+                resources.utilities.push({
+                  path: relativePath,
+                  description: `${name} utility`,
+                  exports: [],
+                  usage: `import { ... } from '@/${relativePath.replace(/\.(js|ts)$/, '')}'`
+                });
+              }
+            } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) { /* ignore */ }
+    }
+  }
+
+  // Scan for Prisma schema (database tables)
+  const prismaSchemaPath = join(projectRoot, 'prisma', 'schema.prisma');
+  if (existsSync(prismaSchemaPath)) {
+    try {
+      const schemaContent = readFileSync(prismaSchemaPath, 'utf-8');
+      const modelRegex = /model\s+(\w+)\s*\{([^}]+)\}/g;
+      let match;
+
+      while ((match = modelRegex.exec(schemaContent)) !== null) {
+        const modelName = match[1];
+        const modelBody = match[2];
+
+        // Extract field names (first word of each line)
+        const fields = modelBody
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.startsWith('//') && !line.startsWith('@@'))
+          .map(line => line.split(/\s+/)[0])
+          .filter(f => f);
+
+        resources.database_tables.push({
+          name: modelName.toLowerCase(),
+          description: `${modelName} model`,
+          fields: fields.slice(0, 10) // Limit to first 10 fields
+        });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  return resources;
+}
+
+/**
+ * Analyze git history for project maturity
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object|null} - Git info or null if not a git repo
+ */
+function analyzeGitHistory(projectRoot) {
+  try {
+    // Check if it's a git repo
+    if (!existsSync(join(projectRoot, '.git'))) {
+      return null;
+    }
+
+    // Count commits
+    const commitCount = parseInt(
+      execSync('git rev-list --count HEAD 2>/dev/null', { cwd: projectRoot, encoding: 'utf-8' }).trim(),
+      10
+    );
+
+    // Get first commit date
+    let firstCommit = null;
+    let lastCommit = null;
+    try {
+      firstCommit = execSync('git log --reverse --format=%aI | head -1', { cwd: projectRoot, encoding: 'utf-8', shell: true }).trim();
+      lastCommit = execSync('git log -1 --format=%aI', { cwd: projectRoot, encoding: 'utf-8' }).trim();
+    } catch (e) { /* ignore */ }
+
+    // Determine maturity
+    let maturity;
+    if (commitCount < 20) {
+      maturity = 'new';
+    } else if (commitCount <= 100) {
+      maturity = 'early';
+    } else {
+      maturity = 'established';
+    }
+
+    return {
+      commit_count: commitCount,
+      maturity,
+      first_commit: firstCommit,
+      last_commit: lastCommit
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * Extract conventions from config files
+ * @param {string} projectRoot - Project root directory
+ * @param {string[]} configFiles - List of detected config files
+ * @returns {Object} - Conventions object
+ */
+function extractConventions(projectRoot, configFiles) {
+  const conventions = {
+    naming: {
+      variables: 'camelCase',
+      components: 'PascalCase',
+      files: 'kebab-case for utilities, PascalCase for components',
+      constants: 'UPPER_SNAKE_CASE'
+    },
+    file_structure: '',
+    database: '',
+    styling: '',
+    error_handling: ''
+  };
+
+  // Detect TypeScript config
+  const hasTypeScript = configFiles.includes('tsconfig.json');
+  if (hasTypeScript) {
+    conventions.naming.types = 'PascalCase for types and interfaces';
+  }
+
+  // Detect ESLint & Prettier
+  const hasEslint = configFiles.some(f => f.includes('eslint'));
+  const hasPrettier = configFiles.some(f => f.includes('prettier'));
+  const tools = [];
+  if (hasEslint) tools.push('ESLint');
+  if (hasPrettier) tools.push('Prettier');
+  if (tools.length > 0) {
+    conventions.naming.enforced_by = tools.join(', ');
+  }
+
+  // Detect architecture from folder structure
+  const folderPattern = detectFolderPattern(projectRoot);
+  switch (folderPattern) {
+    case 'app-router':
+      conventions.file_structure = 'Next.js App Router - app-based routing with layouts and server components';
+      break;
+    case 'feature-based':
+      conventions.file_structure = 'Feature-based architecture - features/modules as self-contained units';
+      break;
+    case 'layer-based':
+      conventions.file_structure = 'Layered architecture (MVC/Clean) - separated controllers, services, models';
+      break;
+    case 'mixed':
+      conventions.file_structure = 'Component-based - separated components, lib, utils, pages';
+      break;
+    default:
+      conventions.file_structure = 'Flat structure';
+  }
+
+  // Detect styling conventions
+  const hasTailwind = configFiles.some(f => f.includes('tailwind'));
+  if (hasTailwind) {
+    conventions.styling = 'TailwindCSS utility classes';
+  }
+
+  // Detect database conventions
+  if (existsSync(join(projectRoot, 'prisma', 'schema.prisma'))) {
+    conventions.database = 'Prisma ORM - snake_case for tables/columns, PascalCase for models';
+  } else if (configFiles.some(f => f.includes('drizzle'))) {
+    conventions.database = 'Drizzle ORM';
+  } else if (existsSync(join(projectRoot, 'migrations'))) {
+    conventions.database = 'SQL migrations';
+  }
+
+  return conventions;
+}
+
+/**
+ * Analyze project structure comprehensively
+ * @param {string} projectRoot - Project root directory
+ * @returns {Object} - Analysis result
+ */
+function analyzeProjectStructure(projectRoot) {
+  const analysis = {
+    stack: [],
+    conventions: {},
+    shared_resources: { ui_components: [], utilities: [], database_tables: [] },
+    projectMaturity: null,
+    folderPattern: 'flat',
+    gitInfo: null,
+    configFiles: []
+  };
+
+  // Detect config files
+  for (const pattern of CONFIG_PATTERNS) {
+    const filePath = join(projectRoot, pattern);
+    if (existsSync(filePath)) {
+      analysis.configFiles.push(pattern);
+    }
+  }
+
+  // Detect technologies from package.json
+  const packageJsonPath = join(projectRoot, 'package.json');
+  if (existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+      const allDeps = { ...packageJson.dependencies, ...packageJson.devDependencies };
+
+      // Check all tech categories
+      for (const [category, techs] of Object.entries(TECH_DETECTION)) {
+        if (category === 'python') continue; // Skip Python for JS projects
+
+        for (const [pkg, name] of Object.entries(techs)) {
+          if (allDeps[pkg] && !analysis.stack.includes(name)) {
+            analysis.stack.push(name);
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // Detect technologies from requirements.txt (Python)
+  const requirementsPath = join(projectRoot, 'requirements.txt');
+  if (existsSync(requirementsPath)) {
+    try {
+      const requirements = readFileSync(requirementsPath, 'utf-8').toLowerCase();
+      for (const [pkg, name] of Object.entries(TECH_DETECTION.python)) {
+        if (requirements.includes(pkg) && !analysis.stack.includes(name)) {
+          analysis.stack.push(name);
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  // Detect folder pattern
+  analysis.folderPattern = detectFolderPattern(projectRoot);
+
+  // Scan shared resources
+  analysis.shared_resources = scanSharedResources(projectRoot);
+
+  // Analyze git history
+  analysis.gitInfo = analyzeGitHistory(projectRoot);
+  if (analysis.gitInfo) {
+    analysis.projectMaturity = analysis.gitInfo.maturity;
+  }
+
+  // Extract conventions
+  analysis.conventions = extractConventions(projectRoot, analysis.configFiles);
+
+  return analysis;
+}
 
 const program = new Command();
 
@@ -75,7 +600,7 @@ async function initRoadmap(options) {
   try {
     // Detect environment
     const env = detectEnvironment(projectRoot);
-    spinner.text = `Detected ${env} project...`;
+    spinner.text = `Detected ${env} project, analyzing structure...`;
 
     // Paths
     const roadmapPath = join(projectRoot, 'roadmap.json');
@@ -90,36 +615,44 @@ async function initRoadmap(options) {
       process.exit(1);
     }
 
+    // Perform comprehensive project analysis
+    spinner.text = 'Analyzing project structure...';
+    const analysis = analyzeProjectStructure(projectRoot);
+
     // Load template
     const template = JSON.parse(readFileSync(templatePath, 'utf-8'));
 
-    // Customize based on environment
-    if (env === 'javascript') {
+    // Populate from package.json basics
+    if (env === 'javascript' && existsSync(join(projectRoot, 'package.json'))) {
       const packageJson = JSON.parse(readFileSync(join(projectRoot, 'package.json'), 'utf-8'));
       template.project_info.name = packageJson.name || 'My Project';
       template.project_info.description = packageJson.description || '';
       template.project_info.version = packageJson.version || '1.0.0';
-
-      // Detect common JS frameworks
-      const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-      const stack = [];
-      if (deps.react) stack.push('React');
-      if (deps.next) stack.push('Next.js');
-      if (deps.vue) stack.push('Vue');
-      if (deps.express) stack.push('Express');
-      if (deps['@nestjs/core']) stack.push('NestJS');
-      if (deps.prisma) stack.push('Prisma');
-      if (deps.typescript) stack.push('TypeScript');
-
-      template.project_info.stack = stack.length > 0 ? stack : ['JavaScript'];
     } else if (env === 'python') {
-      template.project_info.stack = ['Python'];
+      template.project_info.name = basename(projectRoot);
+      if (!analysis.stack.includes('Python')) {
+        analysis.stack.unshift('Python');
+      }
     } else if (env === 'go') {
-      template.project_info.stack = ['Go'];
+      template.project_info.name = basename(projectRoot);
+      analysis.stack.unshift('Go');
     }
 
-    // Set initial timestamp
+    // Apply comprehensive analysis results
+    template.project_info.stack = analysis.stack.length > 0 ? analysis.stack : [env === 'javascript' ? 'JavaScript' : env];
+    template.project_info.conventions = analysis.conventions;
+    template.project_info.shared_resources = analysis.shared_resources;
     template.project_info.last_sync = new Date().toISOString();
+
+    // Add git info if available
+    if (analysis.gitInfo) {
+      template.project_info.git_info = {
+        commit_count: analysis.gitInfo.commit_count,
+        maturity: analysis.gitInfo.maturity,
+        first_commit: analysis.gitInfo.first_commit,
+        last_commit: analysis.gitInfo.last_commit
+      };
+    }
 
     // Save roadmap.json
     writeFileSync(roadmapPath, JSON.stringify(template, null, 2), 'utf-8');
@@ -131,11 +664,27 @@ async function initRoadmap(options) {
 
     spinner.succeed('Roadmap initialized successfully');
 
+    // Display analysis summary
+    console.log(chalk.cyan('\n📊 Project Analysis:'));
+    console.log(chalk.white(`  • Stack: ${analysis.stack.length > 0 ? analysis.stack.join(', ') : 'Not detected'}`));
+    console.log(chalk.white(`  • Structure: ${analysis.folderPattern}`));
+
+    const uiCount = analysis.shared_resources.ui_components.length;
+    const utilCount = analysis.shared_resources.utilities.length;
+    const dbCount = analysis.shared_resources.database_tables.length;
+
+    if (uiCount > 0) console.log(chalk.white(`  • UI Components: ${uiCount} detected`));
+    if (utilCount > 0) console.log(chalk.white(`  • Utilities: ${utilCount} detected`));
+    if (dbCount > 0) console.log(chalk.white(`  • Database tables: ${dbCount} detected`));
+
+    if (analysis.gitInfo) {
+      console.log(chalk.white(`  • Git history: ${analysis.gitInfo.commit_count} commits (${analysis.gitInfo.maturity})`));
+    }
+
     console.log(chalk.cyan('\n📋 Next steps:'));
-    console.log(chalk.white('  1. Edit roadmap.json to add your features and tasks'));
+    console.log(chalk.white('  1. Review roadmap.json and add your features'));
     console.log(chalk.white(`  2. Edit ${getAIRulesFilename(projectRoot)} to customize AI rules`));
-    console.log(chalk.white('  3. Run "roadmap-kit scan" to sync with Git'));
-    console.log(chalk.white('  4. Run "roadmap-kit dashboard" to view progress'));
+    console.log(chalk.white('  3. Run "roadmap-kit dashboard" to view and manage'));
 
   } catch (error) {
     spinner.fail('Error initializing roadmap');
@@ -149,6 +698,7 @@ async function initRoadmap(options) {
  */
 async function openDashboard(options) {
   const projectRoot = options.path || process.cwd();
+  const requestedPort = options.port ? parseInt(options.port, 10) : null;
 
   // Check for roadmap.json in different locations
   let roadmapPath = join(projectRoot, 'roadmap.json');
@@ -173,6 +723,36 @@ async function openDashboard(options) {
   const spinner = ora('Starting dashboard...').start();
 
   try {
+    // Determine port to use
+    let port;
+    let portNote = '';
+
+    if (requestedPort) {
+      // User specified a port
+      if (await isPortAvailable(requestedPort)) {
+        port = requestedPort;
+      } else {
+        spinner.fail(`Port ${requestedPort} is already in use`);
+        console.log(chalk.yellow('  Try a different port with --port <port>'));
+        process.exit(1);
+      }
+    } else {
+      // Auto-detect available port
+      if (await isPortAvailable(DEFAULT_PORT)) {
+        port = DEFAULT_PORT;
+      } else {
+        spinner.text = 'Default port in use, finding available port...';
+        try {
+          port = await findAvailablePort(DEFAULT_PORT);
+          portNote = `  ${chalk.yellow('Note:')} Port ${DEFAULT_PORT} in use, using port ${port} instead\n`;
+        } catch (err) {
+          spinner.fail('No available port found');
+          console.log(chalk.yellow(`  Ports ${DEFAULT_PORT}-${DEFAULT_PORT + 9} are all in use`));
+          process.exit(1);
+        }
+      }
+    }
+
     // Check if dashboard deps are installed
     if (!existsSync(join(dashboardPath, 'node_modules'))) {
       spinner.text = 'Installing dashboard dependencies (first time)...';
@@ -180,7 +760,10 @@ async function openDashboard(options) {
     }
 
     spinner.succeed('Dashboard starting...');
-    console.log(chalk.green('\n✓ Dashboard running at http://localhost:6969'));
+    if (portNote) {
+      console.log(portNote);
+    }
+    console.log(chalk.green(`\n✓ Dashboard running at http://localhost:${port}`));
     console.log(chalk.cyan(`  📋 Roadmap: ${roadmapPath}`));
     console.log(chalk.gray('  Press Ctrl+C to stop\n'));
 
@@ -189,7 +772,7 @@ async function openDashboard(options) {
       cwd: dashboardPath,
       stdio: 'inherit',
       shell: true,
-      env: { ...process.env, PROJECT_ROOT: projectRoot }
+      env: { ...process.env, PROJECT_ROOT: projectRoot, PORT: port.toString() }
     });
 
     serverProcess.on('error', (error) => {
@@ -507,6 +1090,7 @@ program
   .command('dashboard')
   .description('Open roadmap dashboard')
   .option('-p, --path <path>', 'Project path', process.cwd())
+  .option('--port <port>', 'Dashboard port (default: 6969, auto-detects if in use)')
   .action(openDashboard);
 
 // Docker command
