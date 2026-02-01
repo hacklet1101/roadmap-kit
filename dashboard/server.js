@@ -8,11 +8,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import { spawn } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROADMAP_KIT_PATH = path.join(__dirname, '..');
+const ROADMAP_KIT_PATH = process.env.PROJECT_ROOT || path.join(__dirname, '..');
 const ROADMAP_PATH = path.join(ROADMAP_KIT_PATH, 'roadmap.json');
 const AUTH_PATH = path.join(ROADMAP_KIT_PATH, 'auth.json');
 const VERSIONS_PATH = path.join(ROADMAP_KIT_PATH, 'versions.json');
-const PROJECT_ROOT = path.join(ROADMAP_KIT_PATH, '..'); // Parent of roadmap-kit
+const PROJECT_ROOT = process.env.PROJECT_ROOT || path.join(ROADMAP_KIT_PATH, '..');
 const MAX_VERSIONS = 10;
 
 // ============ VERSION CONTROL ============
@@ -108,7 +108,9 @@ async function createDefaultAuthConfig() {
     settings: {
       requireAuth: true,
       sessionDuration: 86400000, // 24h in ms
-      allowRegistration: false
+      allowRegistration: false,
+      defaultTheme: 'glass', // Default theme for new users
+      defaultColorMode: 'light' // Default color mode (light/dark)
     },
     users: [
       {
@@ -117,6 +119,8 @@ async function createDefaultAuthConfig() {
         email: adminEmail,
         password: hashedPassword,
         role: 'admin',
+        theme: 'glass', // User's preferred theme
+        colorMode: 'light', // User's preferred color mode (light/dark)
         createdAt: new Date().toISOString(),
         lastLogin: null
       }
@@ -165,11 +169,15 @@ function getSession(sessionId) {
 function createSession(authConfig, user) {
   const sessionId = generateSessionId();
   const duration = authConfig?.settings?.sessionDuration || 86400000;
+  const defaultTheme = authConfig?.settings?.defaultTheme || 'glass';
+  const defaultColorMode = authConfig?.settings?.defaultColorMode || 'light';
   sessions.set(sessionId, {
     userId: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
+    theme: user.theme || defaultTheme,
+    colorMode: user.colorMode || defaultColorMode,
     createdAt: Date.now(),
     expiresAt: Date.now() + duration
   });
@@ -241,9 +249,11 @@ async function createServer() {
     try {
       const authConfig = await loadAuthConfig();
       const authEnabled = authConfig?.settings?.requireAuth ?? true;
+      const defaultTheme = authConfig?.settings?.defaultTheme || 'glass';
+      const defaultColorMode = authConfig?.settings?.defaultColorMode || 'light';
 
       if (!authEnabled) {
-        return res.json({ authenticated: true, authEnabled: false, user: { role: 'admin', name: 'Anonymous' } });
+        return res.json({ authenticated: true, authEnabled: false, user: { role: 'admin', name: 'Anonymous', theme: defaultTheme, colorMode: defaultColorMode } });
       }
 
       const cookies = req.headers.cookie || '';
@@ -254,7 +264,7 @@ async function createServer() {
       res.json({
         authenticated: !!session,
         authEnabled: true,
-        user: session ? { name: session.name, email: session.email, role: session.role } : null
+        user: session ? { name: session.name, email: session.email, role: session.role, theme: session.theme || defaultTheme, colorMode: session.colorMode || defaultColorMode } : null
       });
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -286,11 +296,13 @@ async function createServer() {
       await saveAuthConfig(authConfig);
 
       const { sessionId, duration } = createSession(authConfig, user);
+      const defaultTheme = authConfig?.settings?.defaultTheme || 'glass';
+      const defaultColorMode = authConfig?.settings?.defaultColorMode || 'light';
       res.setHeader('Set-Cookie', `roadmap_session=${sessionId}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${duration / 1000}`);
       res.json({
         success: true,
         message: 'Login exitoso',
-        user: { name: user.name, email: user.email, role: user.role }
+        user: { name: user.name, email: user.email, role: user.role, theme: user.theme || defaultTheme, colorMode: user.colorMode || defaultColorMode }
       });
     } catch (err) {
       console.error('Login error:', err);
@@ -436,7 +448,7 @@ async function createServer() {
   // API: Update own profile (any authenticated user)
   app.put('/api/auth/profile', authMiddleware, async (req, res) => {
     try {
-      const { name, email, currentPassword, newPassword } = req.body;
+      const { name, email, currentPassword, newPassword, theme, colorMode } = req.body;
       const userId = req.user.userId;
 
       const user = findUserById(req.authConfig, userId);
@@ -466,6 +478,16 @@ async function createServer() {
 
       if (name) user.name = name;
 
+      // Update theme if provided
+      if (theme && ['glass', 'matrix'].includes(theme)) {
+        user.theme = theme;
+      }
+
+      // Update colorMode if provided
+      if (colorMode && ['light', 'dark'].includes(colorMode)) {
+        user.colorMode = colorMode;
+      }
+
       await saveAuthConfig(req.authConfig);
 
       // Update session with new info
@@ -473,11 +495,13 @@ async function createServer() {
       if (session) {
         session.name = user.name;
         session.email = user.email;
+        if (theme) session.theme = user.theme;
+        if (colorMode) session.colorMode = user.colorMode;
       }
 
       res.json({
         success: true,
-        user: { id: user.id, name: user.name, email: user.email, role: user.role }
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, theme: user.theme, colorMode: user.colorMode }
       });
     } catch (err) {
       console.error('Update profile error:', err);
@@ -518,7 +542,8 @@ async function createServer() {
       res.json(JSON.parse(data));
     } catch (err) {
       if (err.code === 'ENOENT') {
-        res.status(404).json({ error: 'roadmap.json not found' });
+        // Return special response indicating roadmap doesn't exist (redirect to setup)
+        res.json({ exists: false, error: 'roadmap.json not found', redirectToSetup: true });
       } else {
         res.status(500).json({ error: err.message });
       }
@@ -849,7 +874,7 @@ NO incluyas explicaciones, solo el JSON. Asegúrate de que sea JSON válido.`;
         process.env.PATH
       ].filter(Boolean).join(':');
 
-      const claude = spawn('claude', ['-p', prompt, '--output-format', 'text'], {
+      const claude = spawn('claude', ['-p', prompt, '--output-format', 'text', '--dangerously-skip-permissions'], {
         cwd: PROJECT_ROOT,
         env: { ...process.env, PATH: expandedPath },
         shell: true

@@ -8,8 +8,10 @@ import {
   HelpCircle, GitCommit, Bot, Wrench, Activity, Grid, Play,
   ArrowRight, Minus as MinusIcon, PlusCircle, MinusCircle, GitBranch,
   Globe, Command, Columns, List, Link2, MessageSquare, Timer,
-  BarChart3, FileDown, History, Bell, Keyboard, Filter
+  BarChart3, FileDown, History, Bell, Keyboard, Filter, Palette,
+  Sun, Moon
 } from 'lucide-react';
+import { themes, DEFAULT_THEME, getTheme } from './themes.js';
 
 // ============ TOAST NOTIFICATION SYSTEM ============
 const ToastContext = createContext();
@@ -73,6 +75,86 @@ const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) throw new Error('useToast must be used within ToastProvider');
   return context.toast;
+};
+
+// ============ THEME SYSTEM ============
+const ThemeContext = createContext();
+
+function ThemeProvider({ children, initialTheme = DEFAULT_THEME, initialColorMode = 'light' }) {
+  const [currentTheme, setCurrentTheme] = useState(initialTheme);
+  const [colorMode, setColorModeState] = useState(initialColorMode);
+
+  // Apply theme and color mode to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', currentTheme);
+    // Apply light/dark class
+    if (colorMode === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
+  }, [currentTheme, colorMode]);
+
+  const setTheme = useCallback(async (themeId) => {
+    if (!themes[themeId]) return;
+    setCurrentTheme(themeId);
+
+    // Save to server
+    try {
+      await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme: themeId })
+      });
+    } catch (err) {
+      console.error('Error saving theme:', err);
+    }
+  }, []);
+
+  const setColorMode = useCallback(async (mode) => {
+    if (!['light', 'dark'].includes(mode)) return;
+    setColorModeState(mode);
+
+    // Save to server
+    try {
+      await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ colorMode: mode })
+      });
+    } catch (err) {
+      console.error('Error saving color mode:', err);
+    }
+  }, []);
+
+  const toggleColorMode = useCallback(() => {
+    setColorMode(colorMode === 'dark' ? 'light' : 'dark');
+  }, [colorMode, setColorMode]);
+
+  const value = useMemo(() => ({
+    theme: currentTheme,
+    themeConfig: getTheme(currentTheme),
+    setTheme,
+    themes,
+    colorMode,
+    setColorMode,
+    toggleColorMode,
+    isDark: colorMode === 'dark'
+  }), [currentTheme, setTheme, colorMode, setColorMode, toggleColorMode]);
+
+  return (
+    <ThemeContext.Provider value={value}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) throw new Error('useTheme must be used within ThemeProvider');
+  return context;
 };
 
 // ============ GLOBAL SEARCH MODAL ============
@@ -237,9 +319,9 @@ function useKeyboardShortcuts(handlers) {
         return;
       }
 
-      // Number keys 1-7 for tab navigation
+      // Number keys 1-8 for tab navigation
       if (!e.ctrlKey && !e.metaKey && !e.altKey) {
-        if (e.key >= '1' && e.key <= '7') {
+        if (e.key >= '1' && e.key <= '8') {
           e.preventDefault();
           handlers.onTabChange?.(parseInt(e.key) - 1);
           return;
@@ -1207,6 +1289,9 @@ function App() {
   const [loginError, setLoginError] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]); // Users for task assignment
 
+  // Theme
+  const { setTheme } = useTheme();
+
   // Confirmation modal state
   const [confirmModal, setConfirmModal] = useState({
     show: false,
@@ -1280,6 +1365,14 @@ function App() {
         authEnabled: data.authEnabled,
         user: data.user || null
       });
+      // Sync theme and color mode from user
+      if (data.user?.theme) {
+        document.documentElement.setAttribute('data-theme', data.user.theme);
+      }
+      if (data.user?.colorMode) {
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(data.user.colorMode);
+      }
       if (data.authenticated || !data.authEnabled) {
         loadRoadmap();
         loadTeamMembers();
@@ -1307,6 +1400,14 @@ function App() {
           authEnabled: true,
           user: data.user
         });
+        // Sync theme and color mode from user
+        if (data.user?.theme) {
+          document.documentElement.setAttribute('data-theme', data.user.theme);
+        }
+        if (data.user?.colorMode) {
+          document.documentElement.classList.remove('light', 'dark');
+          document.documentElement.classList.add(data.user.colorMode);
+        }
         loadRoadmap();
       } else {
         setLoginError(data.error || 'Error de autenticacion');
@@ -1339,8 +1440,31 @@ function App() {
           return;
         }
       }
-      if (!response.ok) throw new Error('No se pudo cargar roadmap.json');
       const data = await response.json();
+      // Handle case when roadmap.json doesn't exist - redirect to setup
+      if (data.exists === false || data.redirectToSetup) {
+        setRoadmap({ project_info: { name: '', description: '', stack: [] }, features: [] });
+        setActiveTab('setup');
+        setLoading(false);
+        return;
+      }
+      if (!response.ok) throw new Error('No se pudo cargar roadmap.json');
+      // Recalculate progress on load to ensure consistency
+      if (data.features) {
+        data.features.forEach(feature => {
+          if (feature.tasks?.length > 0) {
+            const completed = feature.tasks.filter(t => t.status === 'completed').length;
+            feature.progress = Math.round((completed / feature.tasks.length) * 100);
+          } else {
+            feature.progress = 0;
+          }
+        });
+        const allTasks = data.features.flatMap(f => f.tasks || []);
+        if (allTasks.length > 0) {
+          const totalCompleted = allTasks.filter(t => t.status === 'completed').length;
+          data.project_info.total_progress = Math.round((totalCompleted / allTasks.length) * 100);
+        }
+      }
       setRoadmap(data);
       setHasChanges(false);
     } catch (err) {
@@ -1597,13 +1721,13 @@ function App() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black p-4">
-        <div className="terminal-card p-8 max-w-md w-full">
+        <div className="theme-card p-8 max-w-md w-full">
           <div className="flex items-center gap-3 mb-6">
-            <div className="led led-red" />
+            <div className="led theme-led theme-led-danger" />
             <span className="font-mono text-alert text-sm tracking-wider">ERROR</span>
           </div>
           <p className="font-mono text-gray-400 text-sm mb-6">{error}</p>
-          <button onClick={loadRoadmap} className="btn-terminal w-full">
+          <button onClick={loadRoadmap} className="theme-btn-primary w-full">
             RETRY
           </button>
         </div>
@@ -1621,7 +1745,7 @@ function App() {
       {/* <div className="scanlines" /> */}
 
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full sidebar-terminal z-50 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+      <aside className={`fixed left-0 top-0 h-full theme-sidebar z-50 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-4 border-b border-matrix/10">
@@ -1646,8 +1770,8 @@ function App() {
                   <span className="font-mono text-[10px] text-gray-500 tracking-widest">{language === 'es' ? 'PROGRESO' : 'PROGRESS'}</span>
                   <span className="font-display text-2xl text-matrix">{projectInfo.total_progress || 0}%</span>
                 </div>
-                <div className="progress-brutal">
-                  <div className="progress-brutal-fill" style={{ width: `${projectInfo.total_progress || 0}%` }} />
+                <div className="theme-progress">
+                  <div className="theme-progress-fill" style={{ width: `${projectInfo.total_progress || 0}%` }} />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -1676,7 +1800,7 @@ function App() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`nav-terminal w-full flex items-center gap-3 px-4 py-3 transition-all ${
+                  className={`theme-nav-item w-full flex items-center gap-3 px-4 py-3 transition-all ${
                     isActive ? 'active' : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.02]'
                   } ${sidebarCollapsed ? 'justify-center px-2' : 'pl-8'}`}
                 >
@@ -1699,7 +1823,7 @@ function App() {
               </div>
             )}
             {hasChanges && !sidebarCollapsed && (
-              <button onClick={saveRoadmap} disabled={saving} className="btn-terminal w-full flex items-center justify-center gap-2">
+              <button onClick={saveRoadmap} disabled={saving} className="theme-btn-primary w-full flex items-center justify-center gap-2">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {t('common.save')}
               </button>
@@ -1772,7 +1896,7 @@ function App() {
         </header>
 
         {/* Content Area */}
-        <div className="p-6 pb-24 grid-bg min-h-[calc(100vh-120px)]">
+        <div className="p-6 pb-24 theme-grid-bg min-h-[calc(100vh-120px)]">
           {activeTab === 'features' && (
             <FeaturesTab
               features={filteredFeatures}
@@ -2256,7 +2380,7 @@ function AIGeneratorModal({ roadmap, setRoadmap, setHasChanges, onClose }) {
 - Notificaciones por email
 - Integración con Stripe para pagos
 - API REST documentada con Swagger`}
-              className="w-full h-64 input-terminal p-4 text-sm resize-none"
+              className="w-full h-64 theme-input p-4 text-sm resize-none"
               spellCheck={false}
             />
             <p className="mt-2 font-mono text-[10px] text-gray-600">
@@ -2268,7 +2392,7 @@ function AIGeneratorModal({ roadmap, setRoadmap, setHasChanges, onClose }) {
             <button
               onClick={analyzeWithAI}
               disabled={analyzing || !requirements.trim() || (!claudeStatus.available && !claudeStatus.checking)}
-              className="btn-terminal flex-1 py-3 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="theme-btn-primary flex-1 py-3 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Sparkles className="w-4 h-4" />
               GENERAR CON IA
@@ -2350,7 +2474,7 @@ function AIGeneratorModal({ roadmap, setRoadmap, setHasChanges, onClose }) {
           <div className="flex gap-3">
             <button
               onClick={mergeResults}
-              className="btn-terminal flex-1 py-3 flex items-center justify-center gap-2"
+              className="theme-btn-primary flex-1 py-3 flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" />
               AÑADIR AL ROADMAP
@@ -2533,13 +2657,13 @@ function FeaturesTab({
             placeholder={t ? t('common.search') : "search tasks..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-terminal w-full pl-10 pr-4 py-2.5 text-sm"
+            className="theme-input w-full pl-10 pr-4 py-2.5 text-sm"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="input-terminal px-4 py-2.5 text-sm cursor-pointer"
+          className="theme-input px-4 py-2.5 text-sm cursor-pointer"
         >
           <option value="all">{language === 'es' ? 'TODOS' : 'ALL STATUS'}</option>
           <option value="pending">{language === 'es' ? 'PENDIENTE' : 'PENDING'}</option>
@@ -2568,17 +2692,17 @@ function FeaturesTab({
         {/* Advanced Filters Toggle */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`btn-terminal flex items-center gap-2 ${showFilters ? 'border-cyber/50 text-cyber' : ''}`}
+          className={`theme-btn-primary flex items-center gap-2 ${showFilters ? 'border-cyber/50 text-cyber' : ''}`}
         >
           <Filter className="w-4 h-4" />
           {language === 'es' ? 'FILTROS' : 'FILTERS'}
         </button>
 
-        <button onClick={() => setShowAddFeature(true)} className="btn-terminal flex items-center gap-2">
+        <button onClick={() => setShowAddFeature(true)} className="theme-btn-primary flex items-center gap-2">
           <Plus className="w-4 h-4" />
           {language === 'es' ? 'NUEVA FEATURE' : 'NEW FEATURE'}
         </button>
-        <button onClick={() => setShowAIGenerator(true)} className="btn-terminal flex items-center gap-2 bg-gradient-to-r from-cyber/20 to-matrix/20 border-cyber/50 hover:border-cyber">
+        <button onClick={() => setShowAIGenerator(true)} className="theme-btn-primary flex items-center gap-2 bg-gradient-to-r from-cyber/20 to-matrix/20 border-cyber/50 hover:border-cyber">
           <Sparkles className="w-4 h-4 text-cyber" />
           AI
         </button>
@@ -2592,7 +2716,7 @@ function FeaturesTab({
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              className="input-terminal px-3 py-1.5 text-xs cursor-pointer"
+              className="theme-input px-3 py-1.5 text-xs cursor-pointer"
             >
               <option value="all">{language === 'es' ? 'TODAS' : 'ALL'}</option>
               <option value="high">{language === 'es' ? 'ALTA' : 'HIGH'}</option>
@@ -2605,7 +2729,7 @@ function FeaturesTab({
             <select
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}
-              className="input-terminal px-3 py-1.5 text-xs cursor-pointer"
+              className="theme-input px-3 py-1.5 text-xs cursor-pointer"
             >
               <option value="all">{language === 'es' ? 'TODOS' : 'ALL'}</option>
               <option value="">{language === 'es' ? 'SIN ASIGNAR' : 'UNASSIGNED'}</option>
@@ -2654,7 +2778,7 @@ function FeaturesTab({
       )}
 
       {features.length === 0 && viewMode === 'list' && (
-        <div className="terminal-card p-12 text-center">
+        <div className="theme-card p-12 text-center">
           <Search className="w-10 h-10 mx-auto mb-4 text-gray-700" />
           <p className="font-mono text-gray-600 text-sm">{language === 'es' ? 'NO HAY TAREAS' : 'NO TASKS FOUND'}</p>
         </div>
@@ -2684,7 +2808,7 @@ function FeatureCard({ feature, onUpdateTaskStatus, onAddTask, showAddTask, setS
         {/* Progress Ring */}
         <div className="relative w-14 h-14 flex-shrink-0">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-            <circle cx="18" cy="18" r="15" fill="none" stroke="#1a1a1a" strokeWidth="3" />
+            <circle cx="18" cy="18" r="15" fill="none" stroke="var(--bg-secondary)" strokeWidth="3" />
             <circle
               cx="18" cy="18" r="15" fill="none"
               stroke="url(#progressGradient)"
@@ -2695,8 +2819,8 @@ function FeatureCard({ feature, onUpdateTaskStatus, onAddTask, showAddTask, setS
             />
             <defs>
               <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#00ff88" />
-                <stop offset="100%" stopColor="#00d4ff" />
+                <stop offset="0%" stopColor="var(--accent-primary)" />
+                <stop offset="100%" stopColor="var(--accent-tertiary)" />
               </linearGradient>
             </defs>
           </svg>
@@ -2726,8 +2850,8 @@ function FeatureCard({ feature, onUpdateTaskStatus, onAddTask, showAddTask, setS
               <span>{feature.tasks.filter(t => t.status === 'completed').length} / {feature.tasks.length} TASKS</span>
               <span>{feature.progress}%</span>
             </div>
-            <div className="progress-brutal">
-              <div className="progress-brutal-fill" style={{ width: `${feature.progress}%` }} />
+            <div className="theme-progress">
+              <div className="theme-progress-fill" style={{ width: `${feature.progress}%` }} />
             </div>
           </div>
 
@@ -2764,8 +2888,8 @@ function TaskList({ tasks = [], featureId = '', onUpdateStatus, team = [], onAss
   };
 
   const statusConfig = {
-    completed: { led: 'led-green', label: 'DONE', color: 'text-matrix' },
-    in_progress: { led: 'led-amber', label: 'ACTIVE', color: 'text-signal' },
+    completed: { led: 'theme-led theme-led-success', label: 'DONE', color: 'text-matrix' },
+    in_progress: { led: 'theme-led theme-led-warning', label: 'ACTIVE', color: 'text-signal' },
     pending: { led: 'led-gray', label: 'QUEUE', color: 'text-gray-500' }
   };
 
@@ -2970,7 +3094,7 @@ function TaskList({ tasks = [], featureId = '', onUpdateStatus, team = [], onAss
                         const member = team.find(m => m.id === e.target.value);
                         onAssignTask?.(featureId, task.id, e.target.value, member?.name || '');
                       }}
-                      className="input-terminal px-3 py-1.5 text-[11px]"
+                      className="theme-input px-3 py-1.5 text-[11px]"
                     >
                       <option value="">Sin asignar</option>
                       {team.map((member) => (
@@ -3063,27 +3187,27 @@ function MetricsTab({ roadmap, language }) {
     <div className="space-y-6 animate-fade-in">
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <div className="font-mono text-[10px] text-gray-500 mb-2">{language === 'es' ? 'TOTAL TAREAS' : 'TOTAL TASKS'}</div>
           <div className="font-display text-3xl text-white">{stats.total}</div>
         </div>
-        <div className="terminal-card p-5 border-matrix/20">
+        <div className="theme-card p-5 border-matrix/20">
           <div className="font-mono text-[10px] text-gray-500 mb-2">{language === 'es' ? 'COMPLETADAS' : 'COMPLETED'}</div>
           <div className="font-display text-3xl text-matrix">{stats.completed}</div>
           <div className="font-mono text-[10px] text-matrix/60 mt-1">{completionRate}%</div>
         </div>
-        <div className="terminal-card p-5 border-signal/20">
+        <div className="theme-card p-5 border-signal/20">
           <div className="font-mono text-[10px] text-gray-500 mb-2">{language === 'es' ? 'EN PROGRESO' : 'IN PROGRESS'}</div>
           <div className="font-display text-3xl text-signal">{stats.inProgress}</div>
         </div>
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <div className="font-mono text-[10px] text-gray-500 mb-2">{language === 'es' ? 'PENDIENTES' : 'PENDING'}</div>
           <div className="font-display text-3xl text-gray-500">{stats.pending}</div>
         </div>
       </div>
 
       {/* Progress Overview */}
-      <div className="terminal-card p-5">
+      <div className="theme-card p-5">
         <h3 className="font-mono text-sm text-white mb-4">{language === 'es' ? 'PROGRESO GENERAL' : 'OVERALL PROGRESS'}</h3>
         <div className="relative h-8 bg-void-100 border border-white/5 overflow-hidden">
           <div
@@ -3104,7 +3228,7 @@ function MetricsTab({ roadmap, language }) {
       </div>
 
       {/* By Priority */}
-      <div className="terminal-card p-5">
+      <div className="theme-card p-5">
         <h3 className="font-mono text-sm text-white mb-4">{language === 'es' ? 'POR PRIORIDAD' : 'BY PRIORITY'}</h3>
         <div className="grid grid-cols-3 gap-4">
           <div className="p-4 bg-alert/5 border border-alert/20">
@@ -3132,7 +3256,7 @@ function MetricsTab({ roadmap, language }) {
       </div>
 
       {/* By Feature */}
-      <div className="terminal-card p-5">
+      <div className="theme-card p-5">
         <h3 className="font-mono text-sm text-white mb-4">{language === 'es' ? 'POR FEATURE' : 'BY FEATURE'}</h3>
         <div className="space-y-3">
           {stats.byFeature.map((feature, idx) => (
@@ -3156,7 +3280,7 @@ function MetricsTab({ roadmap, language }) {
       </div>
 
       {/* Export Options */}
-      <div className="terminal-card p-5">
+      <div className="theme-card p-5">
         <h3 className="font-mono text-sm text-white mb-4">{language === 'es' ? 'EXPORTAR DATOS' : 'EXPORT DATA'}</h3>
         <div className="flex gap-3">
           <button
@@ -3176,7 +3300,7 @@ function MetricsTab({ roadmap, language }) {
               a.download = 'roadmap-export.csv';
               a.click();
             }}
-            className="btn-terminal flex items-center gap-2"
+            className="theme-btn-primary flex items-center gap-2"
           >
             <FileDown className="w-4 h-4" />
             CSV
@@ -3190,7 +3314,7 @@ function MetricsTab({ roadmap, language }) {
               a.download = 'roadmap-backup.json';
               a.click();
             }}
-            className="btn-terminal flex items-center gap-2"
+            className="theme-btn-primary flex items-center gap-2"
           >
             <FileDown className="w-4 h-4" />
             JSON
@@ -3216,23 +3340,23 @@ function ResourcesTab({ resources }) {
     <div className="space-y-6 animate-fade-in">
       {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <div className="flex items-center gap-3 mb-3">
-            <div className="led led-green" />
+            <div className="led theme-led theme-led-success" />
             <span className="font-mono text-[10px] text-gray-500 tracking-wider">UI COMPONENTS</span>
           </div>
           <div className="metric-display text-3xl text-matrix">{ui_components.length}</div>
         </div>
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <div className="flex items-center gap-3 mb-3">
-            <div className="led led-amber" />
+            <div className="led theme-led theme-led-warning" />
             <span className="font-mono text-[10px] text-gray-500 tracking-wider">UTILITIES</span>
           </div>
           <div className="metric-display text-3xl text-signal">{utilities.length}</div>
         </div>
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <div className="flex items-center gap-3 mb-3">
-            <div className="led led-green" />
+            <div className="led theme-led theme-led-success" />
             <span className="font-mono text-[10px] text-gray-500 tracking-wider">DB TABLES</span>
           </div>
           <div className="metric-display text-3xl text-cyber">{database_tables.length}</div>
@@ -3241,7 +3365,7 @@ function ResourcesTab({ resources }) {
 
       {/* UI Components */}
       {ui_components.length > 0 && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-matrix tracking-wider mb-4"># UI_COMPONENTS</h3>
           <div className="space-y-3">
             {ui_components.map((comp, idx) => (
@@ -3265,7 +3389,7 @@ function ResourcesTab({ resources }) {
 
       {/* Utilities */}
       {utilities.length > 0 && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-signal tracking-wider mb-4"># UTILITIES</h3>
           <div className="space-y-3">
             {utilities.map((util, idx) => (
@@ -3302,7 +3426,7 @@ function ResourcesTab({ resources }) {
 
       {/* Database Tables */}
       {database_tables.length > 0 && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-cyber tracking-wider mb-4"># DATABASE_TABLES</h3>
           <div className="space-y-3">
             {database_tables.map((table, idx) => (
@@ -3369,8 +3493,8 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
 
   const statusConfig = {
     pending: { led: 'led-gray', label: 'PENDING', color: 'text-gray-500' },
-    in_progress: { led: 'led-amber', label: 'IN PROGRESS', color: 'text-signal' },
-    resolved: { led: 'led-green', label: 'RESOLVED', color: 'text-matrix' }
+    in_progress: { led: 'theme-led theme-led-warning', label: 'IN PROGRESS', color: 'text-signal' },
+    resolved: { led: 'theme-led theme-led-success', label: 'RESOLVED', color: 'text-matrix' }
   };
 
   // Update debt status
@@ -3458,30 +3582,30 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
       <div className="grid grid-cols-3 gap-4">
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'high' ? 'all' : 'high')}
-          className={`terminal-card p-5 transition-all ${filterSeverity === 'high' ? 'border-alert glow-alert' : 'border-alert/30 hover:border-alert/50'}`}
+          className={`theme-card p-5 transition-all ${filterSeverity === 'high' ? 'border-alert glow-alert' : 'border-alert/30 hover:border-alert/50'}`}
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="led led-red" />
+            <div className="led theme-led theme-led-danger" />
             <span className="font-mono text-[10px] text-gray-500 tracking-wider">HIGH</span>
           </div>
           <div className="metric-display text-3xl text-alert">{bySeverity.high.length}</div>
         </button>
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'medium' ? 'all' : 'medium')}
-          className={`terminal-card p-5 transition-all ${filterSeverity === 'medium' ? 'border-signal glow-signal' : 'border-signal/30 hover:border-signal/50'}`}
+          className={`theme-card p-5 transition-all ${filterSeverity === 'medium' ? 'border-signal glow-signal' : 'border-signal/30 hover:border-signal/50'}`}
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="led led-amber" />
+            <div className="led theme-led theme-led-warning" />
             <span className="font-mono text-[10px] text-gray-500 tracking-wider">MEDIUM</span>
           </div>
           <div className="metric-display text-3xl text-signal">{bySeverity.medium.length}</div>
         </button>
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'low' ? 'all' : 'low')}
-          className={`terminal-card p-5 transition-all ${filterSeverity === 'low' ? 'border-cyber glow-cyber' : 'border-cyber/30 hover:border-cyber/50'}`}
+          className={`theme-card p-5 transition-all ${filterSeverity === 'low' ? 'border-cyber glow-cyber' : 'border-cyber/30 hover:border-cyber/50'}`}
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="led led-green" />
+            <div className="led theme-led theme-led-success" />
             <span className="font-mono text-[10px] text-gray-500 tracking-wider">LOW</span>
           </div>
           <div className="metric-display text-3xl text-cyber">{bySeverity.low.length}</div>
@@ -3494,7 +3618,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="input-terminal px-3 py-2 text-xs"
+          className="theme-input px-3 py-2 text-xs"
         >
           <option value="all">ALL STATUS</option>
           <option value="pending">PENDING</option>
@@ -3514,7 +3638,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
         </span>
         <button
           onClick={() => setShowAddDebt(true)}
-          className="ml-auto btn-terminal flex items-center gap-2"
+          className="ml-auto theme-btn-primary flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           ADD DEBT
@@ -3533,7 +3657,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
 
       {/* Debt Items */}
       {filteredDebts.length > 0 ? (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-signal tracking-wider mb-4"># TECHNICAL_DEBT</h3>
           <div className="space-y-2">
             {filteredDebts.map((debt) => {
@@ -3734,7 +3858,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
           </div>
         </div>
       ) : (
-        <div className="terminal-card p-12 text-center">
+        <div className="theme-card p-12 text-center">
           <CheckCircle2 className="w-10 h-10 mx-auto mb-4 text-matrix" />
           <p className="font-mono text-sm text-gray-600">
             {allDebts.length === 0 ? 'NO TECHNICAL DEBT REGISTERED' : 'NO ITEMS MATCH FILTERS'}
@@ -3742,7 +3866,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
           {allDebts.length === 0 && (
             <button
               onClick={() => setShowAddDebt(true)}
-              className="btn-terminal mt-4 inline-flex items-center gap-2"
+              className="theme-btn-primary mt-4 inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               ADD FIRST DEBT
@@ -3752,7 +3876,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
       )}
 
       {/* Debt Schema Info */}
-      <div className="terminal-card p-4">
+      <div className="theme-card p-4">
         <details>
           <summary className="font-mono text-[10px] text-gray-600 cursor-pointer hover:text-white">
             JSON SCHEMA FOR TECHNICAL DEBT
@@ -3826,7 +3950,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="terminal-card p-5 space-y-4">
+    <form onSubmit={handleSubmit} className="theme-card p-5 space-y-4">
       <h3 className="font-mono text-sm text-signal tracking-wider">
         {isEdit ? '# EDIT DEBT' : '# NEW TECHNICAL DEBT'}
       </h3>
@@ -3838,7 +3962,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
             <select
               value={featureId}
               onChange={(e) => { setFeatureId(e.target.value); setTaskId(''); }}
-              className="input-terminal w-full px-3 py-2 text-sm"
+              className="theme-input w-full px-3 py-2 text-sm"
               required
             >
               <option value="">Select feature...</option>
@@ -3852,7 +3976,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
             <select
               value={taskId}
               onChange={(e) => setTaskId(e.target.value)}
-              className="input-terminal w-full px-3 py-2 text-sm"
+              className="theme-input w-full px-3 py-2 text-sm"
               required
               disabled={!featureId}
             >
@@ -3872,7 +3996,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Describe the technical debt..."
           rows={2}
-          className="input-terminal w-full px-3 py-2 text-sm resize-none"
+          className="theme-input w-full px-3 py-2 text-sm resize-none"
           required
         />
       </div>
@@ -3880,7 +4004,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div>
           <label className="font-mono text-[10px] text-gray-500 tracking-wider mb-2 block">SEVERITY</label>
-          <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="input-terminal w-full px-3 py-2 text-sm">
+          <select value={severity} onChange={(e) => setSeverity(e.target.value)} className="theme-input w-full px-3 py-2 text-sm">
             <option value="high">HIGH</option>
             <option value="medium">MEDIUM</option>
             <option value="low">LOW</option>
@@ -3888,7 +4012,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
         </div>
         <div>
           <label className="font-mono text-[10px] text-gray-500 tracking-wider mb-2 block">PRIORITY</label>
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="input-terminal w-full px-3 py-2 text-sm">
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="theme-input w-full px-3 py-2 text-sm">
             <option value="critical">CRITICAL</option>
             <option value="high">HIGH</option>
             <option value="medium">MEDIUM</option>
@@ -3902,12 +4026,12 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
             value={estimatedEffort}
             onChange={(e) => setEstimatedEffort(e.target.value)}
             placeholder="e.g. 2h, 1d"
-            className="input-terminal w-full px-3 py-2 text-sm"
+            className="theme-input w-full px-3 py-2 text-sm"
           />
         </div>
         <div>
           <label className="font-mono text-[10px] text-gray-500 tracking-wider mb-2 block">ASSIGNED</label>
-          <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="input-terminal w-full px-3 py-2 text-sm">
+          <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)} className="theme-input w-full px-3 py-2 text-sm">
             <option value="">Unassigned</option>
             {team.map(m => (
               <option key={m.id} value={m.name}>{m.name}</option>
@@ -3923,7 +4047,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
           onChange={(e) => setImpact(e.target.value)}
           placeholder="What happens if not fixed?"
           rows={2}
-          className="input-terminal w-full px-3 py-2 text-sm resize-none"
+          className="theme-input w-full px-3 py-2 text-sm resize-none"
         />
       </div>
 
@@ -3934,7 +4058,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
           onChange={(e) => setSolution(e.target.value)}
           placeholder="How to fix this?"
           rows={2}
-          className="input-terminal w-full px-3 py-2 text-sm resize-none"
+          className="theme-input w-full px-3 py-2 text-sm resize-none"
         />
       </div>
 
@@ -3946,7 +4070,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
             value={affectedFiles}
             onChange={(e) => setAffectedFiles(e.target.value)}
             placeholder="src/file1.js, src/file2.js"
-            className="input-terminal w-full px-3 py-2 text-sm"
+            className="theme-input w-full px-3 py-2 text-sm"
           />
         </div>
         <div>
@@ -3956,7 +4080,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="security, performance"
-            className="input-terminal w-full px-3 py-2 text-sm"
+            className="theme-input w-full px-3 py-2 text-sm"
           />
         </div>
       </div>
@@ -3965,7 +4089,7 @@ function DebtForm({ features, team, initialData, onSave, onCancel, isEdit }) {
         <button type="button" onClick={onCancel} className="px-4 py-2 border border-white/10 text-gray-500 font-mono text-xs hover:text-white transition-all">
           CANCEL
         </button>
-        <button type="submit" className="btn-terminal flex-1 py-2">
+        <button type="submit" className="theme-btn-primary flex-1 py-2">
           {isEdit ? 'UPDATE' : 'ADD DEBT'}
         </button>
       </div>
@@ -3980,7 +4104,7 @@ function InfoTab({ projectInfo }) {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Stack */}
-      <div className="terminal-card p-5">
+      <div className="theme-card p-5">
         <h3 className="font-mono text-sm text-matrix tracking-wider mb-4"># STACK</h3>
         <div className="flex flex-wrap gap-2">
           {(projectInfo.stack || []).map((tech, idx) => (
@@ -3996,7 +4120,7 @@ function InfoTab({ projectInfo }) {
 
       {/* Architecture */}
       {projectInfo.architecture && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-cyber tracking-wider mb-4"># ARCHITECTURE</h3>
           <p className="font-mono text-xs text-gray-400 leading-relaxed">{projectInfo.architecture}</p>
         </div>
@@ -4004,7 +4128,7 @@ function InfoTab({ projectInfo }) {
 
       {/* Conventions */}
       {Object.keys(conventions).length > 0 && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-signal tracking-wider mb-4"># CONVENTIONS</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {conventions.naming && (
@@ -4054,7 +4178,7 @@ function InfoTab({ projectInfo }) {
 
       {/* Purpose */}
       {projectInfo.purpose && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-matrix tracking-wider mb-4"># PURPOSE</h3>
           <p className="font-mono text-xs text-gray-400 leading-relaxed">{projectInfo.purpose}</p>
         </div>
@@ -4067,6 +4191,267 @@ function InfoTab({ projectInfo }) {
           LAST SYNC: {new Date(projectInfo.last_sync).toLocaleString('es-ES')}
         </div>
       )}
+    </div>
+  );
+}
+
+// ============ APPEARANCE SECTION ============
+function AppearanceSection({ language }) {
+  const { theme: currentTheme, setTheme, colorMode, setColorMode, isDark } = useTheme();
+  const [saving, setSaving] = useState(false);
+  const [savingMode, setSavingMode] = useState(false);
+  const toast = useToast();
+
+  const handleThemeChange = async (themeId) => {
+    if (themeId === currentTheme) return;
+    setSaving(true);
+    try {
+      await setTheme(themeId);
+      toast.success(language === 'es' ? 'Tema actualizado' : 'Theme updated');
+    } catch (err) {
+      toast.error(language === 'es' ? 'Error al guardar el tema' : 'Error saving theme');
+    }
+    setSaving(false);
+  };
+
+  const handleColorModeChange = async (mode) => {
+    if (mode === colorMode) return;
+    setSavingMode(true);
+    try {
+      await setColorMode(mode);
+      toast.success(language === 'es' ? 'Modo de color actualizado' : 'Color mode updated');
+    } catch (err) {
+      toast.error(language === 'es' ? 'Error al guardar el modo' : 'Error saving mode');
+    }
+    setSavingMode(false);
+  };
+
+  // Theme preview SVG components
+  const GlassPreview = () => (
+    <svg viewBox="0 0 120 80" className="w-full h-full">
+      {/* Background */}
+      <rect width="120" height="80" fill="#f1f5f9" />
+      {/* Sidebar */}
+      <rect x="0" y="0" width="30" height="80" fill="#ffffff" fillOpacity="0.7" />
+      <rect x="4" y="8" width="22" height="4" rx="2" fill="#10b981" />
+      <rect x="4" y="16" width="22" height="3" rx="1.5" fill="#e2e8f0" />
+      <rect x="4" y="22" width="22" height="3" rx="1.5" fill="#e2e8f0" />
+      <rect x="4" y="28" width="22" height="3" rx="1.5" fill="#e2e8f0" />
+      {/* Cards */}
+      <rect x="36" y="8" width="38" height="28" rx="4" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+      <rect x="40" y="12" width="20" height="3" rx="1.5" fill="#1e293b" />
+      <rect x="40" y="18" width="30" height="2" rx="1" fill="#94a3b8" />
+      <rect x="40" y="24" width="30" height="4" rx="2" fill="#e2e8f0" />
+      <rect x="40" y="24" width="18" height="4" rx="2" fill="#10b981" />
+      <rect x="80" y="8" width="34" height="28" rx="4" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+      <rect x="84" y="12" width="16" height="3" rx="1.5" fill="#1e293b" />
+      <rect x="84" y="18" width="26" height="2" rx="1" fill="#94a3b8" />
+      {/* Bottom cards */}
+      <rect x="36" y="44" width="78" height="28" rx="4" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1" />
+      <rect x="40" y="48" width="24" height="3" rx="1.5" fill="#1e293b" />
+      <rect x="40" y="54" width="70" height="2" rx="1" fill="#94a3b8" />
+      <rect x="40" y="60" width="70" height="2" rx="1" fill="#94a3b8" />
+    </svg>
+  );
+
+  const MatrixPreview = () => (
+    <svg viewBox="0 0 120 80" className="w-full h-full">
+      {/* Background with grid */}
+      <rect width="120" height="80" fill="#0a0a0a" />
+      <defs>
+        <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+          <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#00ff88" strokeWidth="0.2" strokeOpacity="0.1" />
+        </pattern>
+      </defs>
+      <rect width="120" height="80" fill="url(#grid)" />
+      {/* Sidebar */}
+      <rect x="0" y="0" width="30" height="80" fill="#050505" />
+      <line x1="30" y1="0" x2="30" y2="80" stroke="#00ff88" strokeWidth="0.5" strokeOpacity="0.3" />
+      <rect x="0" y="8" width="2" height="6" fill="#00ff88" />
+      <rect x="6" y="9" width="20" height="4" fill="#00ff88" fillOpacity="0.2" />
+      <text x="8" y="12.5" fill="#00ff88" fontSize="3" fontFamily="monospace">&gt; MENU</text>
+      <rect x="6" y="16" width="20" height="3" fill="#333" />
+      <rect x="6" y="22" width="20" height="3" fill="#333" />
+      <rect x="6" y="28" width="20" height="3" fill="#333" />
+      {/* Cards */}
+      <rect x="36" y="8" width="38" height="28" fill="#0d0d0d" stroke="#00ff88" strokeWidth="0.5" strokeOpacity="0.3" />
+      <line x1="36" y1="8" x2="74" y2="8" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.5" />
+      <rect x="40" y="14" width="20" height="3" fill="#e0e0e0" />
+      <rect x="40" y="20" width="30" height="2" fill="#555" />
+      <rect x="40" y="26" width="30" height="4" fill="#1a1a1a" stroke="#333" strokeWidth="0.5" />
+      <rect x="40" y="26" width="18" height="4" fill="#00ff88" />
+      <rect x="80" y="8" width="34" height="28" fill="#0d0d0d" stroke="#00ff88" strokeWidth="0.5" strokeOpacity="0.3" />
+      <line x1="80" y1="8" x2="114" y2="8" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.5" />
+      <rect x="84" y="14" width="16" height="3" fill="#e0e0e0" />
+      <rect x="84" y="20" width="26" height="2" fill="#555" />
+      {/* Bottom card */}
+      <rect x="36" y="44" width="78" height="28" fill="#0d0d0d" stroke="#00ff88" strokeWidth="0.5" strokeOpacity="0.3" />
+      <line x1="36" y1="44" x2="114" y2="44" stroke="#00ff88" strokeWidth="1" strokeOpacity="0.5" />
+      <rect x="40" y="50" width="24" height="3" fill="#e0e0e0" />
+      <rect x="40" y="56" width="70" height="2" fill="#555" />
+      <rect x="40" y="62" width="70" height="2" fill="#555" />
+    </svg>
+  );
+
+  const themeOptions = [
+    {
+      id: 'glass',
+      name: 'Glass',
+      description: language === 'es' ? 'Interfaz moderna y limpia' : 'Modern and clean interface',
+      preview: GlassPreview
+    },
+    {
+      id: 'matrix',
+      name: 'Matrix',
+      description: language === 'es' ? 'Estética cyberpunk terminal' : 'Cyberpunk terminal aesthetic',
+      preview: MatrixPreview
+    }
+  ];
+
+  return (
+    <div className="theme-card p-6">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-theme-md flex items-center justify-center" style={{ background: 'var(--accent-primary)', opacity: 0.15 }}>
+          <Palette className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
+        </div>
+        <div>
+          <h3 className="font-heading text-lg" style={{ color: 'var(--text-primary)' }}>
+            {language === 'es' ? 'Apariencia' : 'Appearance'}
+          </h3>
+          <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            {language === 'es' ? 'Personaliza el aspecto del dashboard' : 'Customize the dashboard appearance'}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {themeOptions.map((themeOpt) => {
+          const isSelected = currentTheme === themeOpt.id;
+          const Preview = themeOpt.preview;
+
+          return (
+            <button
+              key={themeOpt.id}
+              onClick={() => handleThemeChange(themeOpt.id)}
+              disabled={saving}
+              className={`group relative p-4 text-left transition-all rounded-theme-lg ${
+                isSelected
+                  ? 'ring-2'
+                  : 'hover:ring-1'
+              }`}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-color)',
+                ringColor: isSelected ? 'var(--accent-primary)' : 'var(--border-color-strong)'
+              }}
+            >
+              {/* Preview */}
+              <div
+                className="w-full aspect-[3/2] mb-4 overflow-hidden rounded-theme-md"
+                style={{ border: '1px solid var(--border-color)' }}
+              >
+                <Preview />
+              </div>
+
+              {/* Info */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-heading font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {themeOpt.name}
+                  </h4>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {themeOpt.description}
+                  </p>
+                </div>
+
+                {/* Radio indicator */}
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    isSelected ? 'border-transparent' : ''
+                  }`}
+                  style={{
+                    borderColor: isSelected ? 'var(--accent-primary)' : 'var(--border-color-strong)',
+                    background: isSelected ? 'var(--accent-primary)' : 'transparent'
+                  }}
+                >
+                  {isSelected && (
+                    <Check className="w-3 h-3" style={{ color: 'var(--text-inverse)' }} />
+                  )}
+                </div>
+              </div>
+
+              {/* Loading overlay */}
+              {saving && isSelected && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-theme-lg" style={{ background: 'rgba(0,0,0,0.5)' }}>
+                  <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--accent-primary)' }} />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+            {/* Color Mode Toggle */}
+      <div className="mt-6 pt-6" style={{ borderTop: '1px solid var(--border-color)' }}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isDark ? (
+              <Moon className="w-5 h-5" style={{ color: 'var(--accent-primary)' }} />
+            ) : (
+              <Sun className="w-5 h-5" style={{ color: 'var(--accent-secondary)' }} />
+            )}
+            <div>
+              <h4 className="font-heading font-medium" style={{ color: 'var(--text-primary)' }}>
+                {language === 'es' ? 'Modo de color' : 'Color Mode'}
+              </h4>
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                {language === 'es'
+                  ? isDark ? 'Modo oscuro activado' : 'Modo claro activado'
+                  : isDark ? 'Dark mode enabled' : 'Light mode enabled'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleColorModeChange('light')}
+              disabled={savingMode}
+              className={`px-4 py-2 rounded-theme-md transition-all flex items-center gap-2 ${
+                !isDark ? 'ring-2' : ''
+              }`}
+              style={{
+                background: !isDark ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                color: !isDark ? 'var(--text-inverse)' : 'var(--text-secondary)',
+                ringColor: 'var(--accent-primary)'
+              }}
+            >
+              <Sun className="w-4 h-4" />
+              <span className="text-sm font-medium">{language === 'es' ? 'Claro' : 'Light'}</span>
+            </button>
+            <button
+              onClick={() => handleColorModeChange('dark')}
+              disabled={savingMode}
+              className={`px-4 py-2 rounded-theme-md transition-all flex items-center gap-2 ${
+                isDark ? 'ring-2' : ''
+              }`}
+              style={{
+                background: isDark ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                color: isDark ? 'var(--text-inverse)' : 'var(--text-secondary)',
+                ringColor: 'var(--accent-primary)'
+              }}
+            >
+              <Moon className="w-4 h-4" />
+              <span className="text-sm font-medium">{language === 'es' ? 'Oscuro' : 'Dark'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs mt-4" style={{ color: 'var(--text-muted)' }}>
+        {language === 'es'
+          ? 'El tema y modo se guardan automáticamente en tu perfil'
+          : 'Theme and mode are automatically saved to your profile'}
+      </p>
     </div>
   );
 }
@@ -4408,6 +4793,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
   // Settings sub-tabs configuration
   const settingsTabs = [
     { id: 'profile', label: t('settings.profile'), icon: User, show: !!authState?.user },
+    { id: 'appearance', label: language === 'es' ? 'APARIENCIA' : 'APPEARANCE', icon: Palette, show: true },
     { id: 'users', label: t('settings.users'), icon: Lock, show: isAdmin },
     { id: 'history', label: t('settings.history'), icon: Clock, show: true },
     { id: 'files', label: t('settings.files'), icon: FileCode, show: true },
@@ -4446,7 +4832,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
 
       {/* PROFILE TAB */}
       {settingsSubTab === 'profile' && authState?.user && (
-        <div className="terminal-card p-5 space-y-5">
+        <div className="theme-card p-5 space-y-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-12 h-12 border border-cyber/30 bg-cyber/10 flex items-center justify-center font-display text-cyber text-xl">
               {authState.user.name?.charAt(0).toUpperCase() || 'U'}
@@ -4483,7 +4869,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                 type="text"
                 value={profileData.name}
                 onChange={(e) => setProfileData(prev => ({ ...prev, name: e.target.value }))}
-                className="w-full input-terminal px-3 py-2 text-sm"
+                className="w-full theme-input px-3 py-2 text-sm"
                 placeholder="Your name"
               />
             </div>
@@ -4493,7 +4879,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                 type="email"
                 value={profileData.email}
                 onChange={(e) => setProfileData(prev => ({ ...prev, email: e.target.value }))}
-                className="w-full input-terminal px-3 py-2 text-sm"
+                className="w-full theme-input px-3 py-2 text-sm"
                 placeholder="your@email.com"
               />
             </div>
@@ -4508,7 +4894,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                   type="password"
                   value={profileData.currentPassword}
                   onChange={(e) => setProfileData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                  className="w-full input-terminal px-3 py-2 text-sm"
+                  className="w-full theme-input px-3 py-2 text-sm"
                   placeholder="Required"
                 />
               </div>
@@ -4518,7 +4904,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                   type="password"
                   value={profileData.newPassword}
                   onChange={(e) => setProfileData(prev => ({ ...prev, newPassword: e.target.value }))}
-                  className="w-full input-terminal px-3 py-2 text-sm"
+                  className="w-full theme-input px-3 py-2 text-sm"
                   placeholder="Min 6 chars"
                 />
               </div>
@@ -4528,7 +4914,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                   type="password"
                   value={profileData.confirmPassword}
                   onChange={(e) => setProfileData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  className="w-full input-terminal px-3 py-2 text-sm"
+                  className="w-full theme-input px-3 py-2 text-sm"
                   placeholder="Repeat"
                 />
               </div>
@@ -4538,7 +4924,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
           <button
             onClick={updateProfile}
             disabled={savingProfile}
-            className="btn-terminal py-2 px-6 disabled:opacity-50 flex items-center gap-2"
+            className="theme-btn-primary py-2 px-6 disabled:opacity-50 flex items-center gap-2"
           >
             {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             SAVE CHANGES
@@ -4546,9 +4932,14 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
         </div>
       )}
 
+      {/* APPEARANCE TAB */}
+      {settingsSubTab === 'appearance' && (
+        <AppearanceSection language={language} />
+      )}
+
       {/* HISTORY TAB */}
       {settingsSubTab === 'history' && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-mono text-sm text-white">VERSION HISTORY</h3>
@@ -4559,7 +4950,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
             <button
               onClick={loadVersions}
               disabled={loadingVersions}
-              className="btn-terminal py-2 px-4 text-xs"
+              className="theme-btn-primary py-2 px-4 text-xs"
             >
               {loadingVersions ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             </button>
@@ -4571,7 +4962,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
               <Clock className="w-10 h-10 mx-auto mb-3 text-gray-800" />
               <p className="font-mono text-xs text-gray-600">NO VERSIONS YET</p>
               <p className="font-mono text-[10px] text-gray-700 mt-1">Versions are saved automatically when you save changes</p>
-              <button onClick={loadVersions} className="mt-4 btn-terminal py-2 px-4 text-xs">
+              <button onClick={loadVersions} className="mt-4 theme-btn-primary py-2 px-4 text-xs">
                 LOAD HISTORY
               </button>
             </div>
@@ -4636,7 +5027,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                   <button
                     onClick={() => restoreVersion(selectedVersion.id)}
                     disabled={restoringVersion}
-                    className="btn-terminal py-2 px-4 text-xs flex items-center gap-2"
+                    className="theme-btn-primary py-2 px-4 text-xs flex items-center gap-2"
                   >
                     {restoringVersion ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                     RESTORE THIS VERSION
@@ -4778,7 +5169,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
       {settingsSubTab === 'users' && isAdmin && (
         <div className="space-y-5">
           {/* Auth Settings */}
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-mono text-sm text-white">Authentication Required</h3>
@@ -4794,7 +5185,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
           </div>
 
           {/* Add User */}
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-white mb-4">ADD NEW USER</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
               <input
@@ -4802,26 +5193,26 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                 placeholder="Name *"
                 value={newUser.name}
                 onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                className="input-terminal px-3 py-2 text-sm"
+                className="theme-input px-3 py-2 text-sm"
               />
               <input
                 type="email"
                 placeholder="Email *"
                 value={newUser.email}
                 onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
-                className="input-terminal px-3 py-2 text-sm"
+                className="theme-input px-3 py-2 text-sm"
               />
               <input
                 type="password"
                 placeholder="Password *"
                 value={newUser.password}
                 onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
-                className="input-terminal px-3 py-2 text-sm"
+                className="theme-input px-3 py-2 text-sm"
               />
               <select
                 value={newUser.role}
                 onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value }))}
-                className="input-terminal px-3 py-2 text-sm"
+                className="theme-input px-3 py-2 text-sm"
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>
@@ -4835,14 +5226,14 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
             <button
               onClick={createUser}
               disabled={!newUser.name.trim() || !newUser.email.trim() || !newUser.password.trim()}
-              className="btn-terminal py-2 px-4 disabled:opacity-50"
+              className="theme-btn-primary py-2 px-4 disabled:opacity-50"
             >
               <Plus className="w-4 h-4 inline mr-1" /> CREATE USER
             </button>
           </div>
 
           {/* Users List */}
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-white mb-4">REGISTERED USERS ({users.length})</h3>
             {loadingUsers ? (
               <div className="py-8 text-center">
@@ -4895,9 +5286,9 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
       {settingsSubTab === 'files' && (
         <div className="space-y-5">
           {/* Deploy */}
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="led led-green" />
+              <div className="led theme-led theme-led-success" />
               <div>
                 <h3 className="font-mono text-sm text-matrix tracking-wider">DEPLOY CONFIG</h3>
                 <p className="font-mono text-[10px] text-gray-600">Copy files to project root</p>
@@ -4920,7 +5311,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
               Also create .cursorrules (for Cursor IDE)
             </label>
 
-            <button onClick={deployToProject} disabled={deploying} className="btn-terminal flex items-center gap-2">
+            <button onClick={deployToProject} disabled={deploying} className="theme-btn-primary flex items-center gap-2">
               {deploying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
               DEPLOY FILES
             </button>
@@ -4942,7 +5333,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
           </div>
 
           {/* .clinerules */}
-          <div className="terminal-card">
+          <div className="theme-card">
             <button
               onClick={() => setClineruleExpanded(!clineruleExpanded)}
               className="w-full p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors"
@@ -4978,7 +5369,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                   <textarea
                     value={clinerules}
                     onChange={(e) => setClinerules(e.target.value)}
-                    className="w-full h-[400px] input-terminal p-4 text-xs resize-none"
+                    className="w-full h-[400px] theme-input p-4 text-xs resize-none"
                     spellCheck={false}
                   />
                 ) : (
@@ -4991,7 +5382,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
           </div>
 
           {/* roadmap.json */}
-          <div className="terminal-card">
+          <div className="theme-card">
             <button
               onClick={() => setJsonExpanded(!jsonExpanded)}
               className="w-full p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors"
@@ -5051,7 +5442,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
                     <textarea
                       value={jsonContent}
                       onChange={(e) => { setJsonContent(e.target.value); setJsonError(null); }}
-                      className="w-full h-[400px] input-terminal p-4 text-xs resize-none"
+                      className="w-full h-[400px] theme-input p-4 text-xs resize-none"
                       spellCheck={false}
                     />
                     <p className="mt-2 font-mono text-[10px] text-gray-600">
@@ -5071,7 +5462,7 @@ function SettingsTab({ roadmap, setRoadmap, setHasChanges, authState, showConfir
 
       {/* LANGUAGE TAB */}
       {settingsSubTab === 'language' && (
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-white mb-2">{t('settings.language')}</h3>
           <p className="font-mono text-[10px] text-gray-600 mb-6">
             {language === 'es' ? 'Selecciona el idioma de la interfaz' : 'Select interface language'}
@@ -5188,7 +5579,7 @@ function HelpTab({ t, language }) {
       {/* Templates */}
       {activeSection === 'templates' && (
         <div className="space-y-6">
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-matrix tracking-wider mb-4">{t('help.referenceFiles')}</h3>
             <p className="font-mono text-[11px] text-gray-500 mb-4">{t('help.sharePaths')}</p>
             <div className="space-y-2">
@@ -5212,7 +5603,7 @@ function HelpTab({ t, language }) {
             </div>
           </div>
 
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-cyber tracking-wider mb-4">{t('help.aiInstructions')}</h3>
             <div className="bg-void-100 border border-white/5 p-4 font-mono text-[11px] text-gray-400 overflow-x-auto">
               <pre className="whitespace-pre-wrap">{`Read the example files in:
@@ -5247,7 +5638,7 @@ Then generate a roadmap.json for my project following this structure:
             </div>
           </div>
 
-          <div className="terminal-card p-5 border-matrix/20">
+          <div className="theme-card p-5 border-matrix/20">
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-mono text-sm text-matrix">{t('help.quickPrompt')}</h4>
               <button
@@ -5276,7 +5667,7 @@ Then help me create/improve the roadmap.json for my project following that forma
       {/* Commits */}
       {activeSection === 'commits' && (
         <div className="space-y-6">
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-matrix tracking-wider mb-4">{t('help.commitFormat')}</h3>
             <p className="font-mono text-[11px] text-gray-500 mb-4">{t('help.commitFormatDesc')}</p>
             <div className="bg-void-100 border border-white/5 p-4 mb-6">
@@ -5314,7 +5705,7 @@ Then help me create/improve the roadmap.json for my project following that forma
             </div>
           </div>
 
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h4 className="font-mono text-xs text-gray-400 mb-4">{t('help.examples')}</h4>
             <div className="space-y-3">
               {[
@@ -5330,7 +5721,7 @@ Then help me create/improve the roadmap.json for my project following that forma
             </div>
           </div>
 
-          <div className="terminal-card p-5 border-cyber/20">
+          <div className="theme-card p-5 border-cyber/20">
             <h4 className="font-mono text-sm text-cyber tracking-wider mb-3">{t('help.syncWithGit')}</h4>
             <p className="font-mono text-[11px] text-gray-500 mb-3">{t('help.afterCommits')}</p>
             <div className="bg-void-100 border border-white/5 p-3">
@@ -5346,7 +5737,7 @@ Then help me create/improve the roadmap.json for my project following that forma
       {/* AI Workflow */}
       {activeSection === 'ai' && (
         <div className="space-y-6">
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-matrix tracking-wider mb-4">{t('help.recommendedWorkflow')}</h3>
             <div className="space-y-2">
               {[
@@ -5363,7 +5754,7 @@ Then help me create/improve the roadmap.json for my project following that forma
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="terminal-card p-5 border-matrix/20">
+            <div className="theme-card p-5 border-matrix/20">
               <h4 className="font-mono text-xs text-matrix tracking-wider mb-4 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" /> {t('help.aiMustDo')}
               </h4>
@@ -5376,7 +5767,7 @@ Then help me create/improve the roadmap.json for my project following that forma
               </ul>
             </div>
 
-            <div className="terminal-card p-5 border-alert/20">
+            <div className="theme-card p-5 border-alert/20">
               <h4 className="font-mono text-xs text-alert tracking-wider mb-4 flex items-center gap-2">
                 <X className="w-4 h-4" /> {t('help.aiMustNot')}
               </h4>
@@ -5395,7 +5786,7 @@ Then help me create/improve the roadmap.json for my project following that forma
       {/* Troubleshooting */}
       {activeSection === 'troubleshooting' && (
         <div className="space-y-4">
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-signal tracking-wider mb-4">{t('help.troubleshooting')}</h3>
             <div className="space-y-4">
               {[
@@ -5415,7 +5806,7 @@ Then help me create/improve the roadmap.json for my project following that forma
             </div>
           </div>
 
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h4 className="font-mono text-xs text-gray-400 mb-4">{t('help.fileSummary')}</h4>
             <div className="overflow-x-auto">
               <table className="w-full font-mono text-[11px]">
@@ -5716,7 +6107,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
     return (
       <div className="space-y-6 animate-fade-in">
         {/* Setup Complete Header */}
-        <div className="terminal-card p-8 border-matrix/50 text-center">
+        <div className="theme-card p-8 border-matrix/50 text-center">
           <div className="w-20 h-20 mx-auto border-2 border-matrix/50 flex items-center justify-center mb-6 glow-matrix">
             <CheckCircle2 className="w-10 h-10 text-matrix" />
           </div>
@@ -5729,7 +6120,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
         </div>
 
         {/* Roadmap Status Card */}
-        <div className="terminal-card p-5">
+        <div className="theme-card p-5">
           <h3 className="font-mono text-sm text-white tracking-wider mb-4">
             {t ? t('setup.roadmapStatus') : 'ROADMAP STATUS'}
           </h3>
@@ -5772,7 +6163,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
           <div className="flex gap-3">
             <button
               onClick={() => window.location.hash = '#features'}
-              className="btn-terminal flex-1 py-3 flex items-center justify-center gap-2"
+              className="theme-btn-primary flex-1 py-3 flex items-center justify-center gap-2"
             >
               <Zap className="w-4 h-4" />
               {t ? t('setup.goToDashboard') : 'GO TO DASHBOARD'}
@@ -5788,7 +6179,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
 
         {/* Project Info Summary */}
         {roadmap?.project_info && (
-          <div className="terminal-card p-5">
+          <div className="theme-card p-5">
             <h3 className="font-mono text-sm text-cyber tracking-wider mb-4"># {roadmap.project_info.name || 'PROJECT'}</h3>
             {roadmap.project_info.description && (
               <p className="font-mono text-xs text-gray-400 mb-4">{roadmap.project_info.description}</p>
@@ -5811,7 +6202,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="terminal-card p-5 border-matrix/30">
+      <div className="theme-card p-5 border-matrix/30">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 border border-matrix/50 flex items-center justify-center glow-matrix">
             <Sparkles className="w-7 h-7 text-matrix" />
@@ -5864,7 +6255,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
       {/* Step 1: Choose Connection Mode */}
       {activeStep === 1 && (
         <div className="space-y-4">
-          <div className="terminal-card p-6">
+          <div className="theme-card p-6">
             <h3 className="font-mono text-sm text-matrix tracking-wider mb-4"># {t ? t('setup.chooseConnection') : 'CHOOSE CONNECTION MODE'}</h3>
             <p className="font-mono text-xs text-gray-500 mb-6">
               {t ? t('setup.chooseConnectionDesc') : 'Choose how to connect with Claude to generate your project configuration.'}
@@ -5881,7 +6272,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`led ${claudeCodeStatus.available ? 'led-green' : claudeCodeStatus.checking ? 'led-amber' : 'led-red'}`} />
+                  <div className={`led ${claudeCodeStatus.available ? 'theme-led theme-led-success' : claudeCodeStatus.checking ? 'theme-led theme-led-warning' : 'theme-led theme-led-danger'}`} />
                   <span className="font-mono text-sm text-white">CLAUDE CODE</span>
                   <span className="font-mono text-[9px] px-2 py-0.5 bg-matrix/20 text-matrix border border-matrix/30">
                     {t ? t('setup.recommended') : 'RECOMMENDED'}
@@ -5918,7 +6309,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`led ${apiKeyStatus.hasKey ? 'led-green' : 'led-gray'}`} />
+                  <div className={`led ${apiKeyStatus.hasKey ? 'theme-led theme-led-success' : 'led-gray'}`} />
                   <span className="font-mono text-sm text-white">API KEY</span>
                 </div>
                 <p className="font-mono text-[11px] text-gray-500 mb-3">
@@ -5941,7 +6332,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
 
           {/* Claude Code selected but not available */}
           {generationMode === 'claude-code' && !claudeCodeStatus.checking && !claudeCodeStatus.available && (
-            <div className="terminal-card p-5 border-signal/30">
+            <div className="theme-card p-5 border-signal/30">
               <h4 className="font-mono text-xs text-signal tracking-wider mb-3">INSTALAR CLAUDE CODE</h4>
               <p className="font-mono text-[11px] text-gray-500 mb-4">
                 Para usar tu suscripción, necesitas tener Claude Code instalado y autenticado.
@@ -5965,7 +6356,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
 
           {/* API mode selected - show key input */}
           {generationMode === 'api' && (
-            <div className="terminal-card p-5">
+            <div className="theme-card p-5">
               <h4 className="font-mono text-xs text-cyber tracking-wider mb-3">CONFIGURAR API KEY</h4>
               <p className="font-mono text-[11px] text-gray-500 mb-4">
                 Obtén una API key en{' '}
@@ -5981,7 +6372,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
                     <span className="text-matrix">{apiKeyStatus.maskedKey}</span>
                   </div>
                   <div className="flex gap-3">
-                    <button onClick={() => setActiveStep(2)} className="btn-terminal flex-1">
+                    <button onClick={() => setActiveStep(2)} className="theme-btn-primary flex-1">
                       CONTINUE →
                     </button>
                     <button
@@ -5999,12 +6390,12 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
                     placeholder="sk-ant-api03-..."
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
-                    className="input-terminal w-full px-4 py-3 text-sm"
+                    className="theme-input w-full px-4 py-3 text-sm"
                   />
                   <button
                     onClick={saveApiKey}
                     disabled={!apiKey.trim()}
-                    className="btn-terminal w-full py-3 disabled:opacity-50"
+                    className="theme-btn-primary w-full py-3 disabled:opacity-50"
                   >
                     SAVE API KEY
                   </button>
@@ -6015,7 +6406,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
 
           {/* Continue button for Claude Code mode */}
           {generationMode === 'claude-code' && claudeCodeStatus.available && (
-            <button onClick={() => setActiveStep(2)} className="btn-terminal w-full py-4">
+            <button onClick={() => setActiveStep(2)} className="theme-btn-primary w-full py-4">
               CONTINUE WITH CLAUDE CODE →
             </button>
           )}
@@ -6027,7 +6418,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
         <div className="space-y-4">
           {/* Roadmap Validation Status */}
           {hasExistingRoadmap && (
-            <div className={`terminal-card p-5 ${validateRoadmap.valid ? 'border-matrix/50' : validateRoadmap.issues.length > 0 ? 'border-alert/30' : 'border-signal/30'}`}>
+            <div className={`theme-card p-5 ${validateRoadmap.valid ? 'border-matrix/50' : validateRoadmap.issues.length > 0 ? 'border-alert/30' : 'border-signal/30'}`}>
               <div className="flex items-start gap-4">
                 <div className={`w-12 h-12 border flex items-center justify-center ${
                   validateRoadmap.valid ? 'border-matrix/50 bg-matrix/10' :
@@ -6105,7 +6496,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
                     <div className="flex gap-3">
                       <button
                         onClick={() => setActiveStep(4)}
-                        className="btn-terminal px-6 py-2 flex items-center gap-2"
+                        className="theme-btn-primary px-6 py-2 flex items-center gap-2"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         CONTINUE TO DASHBOARD
@@ -6149,10 +6540,13 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
           )}
 
           {/* Project Scan Results */}
-          <div className="terminal-card">
-            <button
+          <div className="theme-card">
+            <div
               onClick={() => setScanExpanded(!scanExpanded)}
-              className="w-full p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors"
+              className="w-full p-4 flex items-center justify-between hover:bg-white/[0.01] transition-colors cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && setScanExpanded(!scanExpanded)}
             >
               <div className="flex items-center gap-3">
                 <FolderOpen className="w-4 h-4 text-cyber" />
@@ -6173,7 +6567,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
                 </button>
                 <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${scanExpanded ? 'rotate-180' : ''}`} />
               </div>
-            </button>
+            </div>
 
             {scanExpanded && projectScan && (
               <div className="px-4 pb-4 border-t border-white/5">
@@ -6229,7 +6623,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
           </div>
 
           {/* Requirements Input */}
-          <div className="terminal-card p-6">
+          <div className="theme-card p-6">
             <h3 className="font-mono text-sm text-matrix tracking-wider mb-2"># REQUIREMENTS</h3>
             <p className="font-mono text-[10px] text-gray-500 mb-4">
               Describe las características, funcionalidades o mejoras que quieres implementar. Claude analizará tu proyecto y generará un roadmap estructurado.
@@ -6247,13 +6641,13 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
               value={requirements}
               onChange={(e) => setRequirements(e.target.value)}
               rows={10}
-              className="input-terminal w-full px-4 py-3 text-sm resize-none mb-4"
+              className="theme-input w-full px-4 py-3 text-sm resize-none mb-4"
             />
 
             <button
               onClick={analyzeWithAI}
               disabled={generating || !requirements.trim()}
-              className="btn-terminal w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
+              className="theme-btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {generating ? (
                 <>
@@ -6280,7 +6674,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
         <div className="space-y-4">
           {/* Analysis Summary */}
           {generatedResult.analysis && (
-            <div className="terminal-card p-4 border-cyber/30">
+            <div className="theme-card p-4 border-cyber/30">
               <h4 className="font-mono text-xs text-cyber tracking-wider mb-3 flex items-center gap-2">
                 <Info className="w-4 h-4" /> ANALYSIS SUMMARY
               </h4>
@@ -6312,7 +6706,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
             </div>
           )}
 
-          <div className="terminal-card p-6">
+          <div className="theme-card p-6">
             <h3 className="font-mono text-sm text-matrix tracking-wider mb-4"># GENERATED ROADMAP</h3>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
@@ -6373,14 +6767,14 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
               <button onClick={() => setActiveStep(2)} className="px-4 py-2 border border-white/10 text-gray-500 font-mono text-xs hover:text-white transition-all">
                 ← BACK
               </button>
-              <button onClick={applyGenerated} className="btn-terminal flex-1 py-3">
+              <button onClick={applyGenerated} className="theme-btn-primary flex-1 py-3">
                 APPLY & DEPLOY
               </button>
             </div>
           </div>
 
           {/* JSON Preview */}
-          <div className="terminal-card p-4">
+          <div className="theme-card p-4">
             <details>
               <summary className="font-mono text-xs text-gray-500 cursor-pointer hover:text-white">
                 VIEW GENERATED JSON
@@ -6395,7 +6789,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
 
       {/* Step 4: Complete */}
       {activeStep === 4 && (
-        <div className="terminal-card p-8 text-center">
+        <div className="theme-card p-8 text-center">
           <div className="w-20 h-20 mx-auto mb-6 border-2 border-matrix flex items-center justify-center glow-matrix">
             <CheckCircle2 className="w-10 h-10 text-matrix" />
           </div>
@@ -6407,7 +6801,7 @@ function SetupTab({ roadmap, setRoadmap, setHasChanges, loadRoadmap, t, language
             <button onClick={() => { setActiveStep(1); setGeneratedResult(null); }} className="px-4 py-2 border border-white/10 text-gray-500 font-mono text-xs hover:text-white transition-all">
               START OVER
             </button>
-            <button onClick={() => window.location.reload()} className="btn-terminal px-6 py-2">
+            <button onClick={() => window.location.reload()} className="theme-btn-primary px-6 py-2">
               VIEW DASHBOARD
             </button>
           </div>
@@ -6445,7 +6839,7 @@ function AddTaskForm({ onAdd, onCancel, team = [], t, language }) {
           placeholder={t ? t('features.taskName') : "Task name"}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="input-terminal w-full px-3 py-2 text-sm"
+          className="theme-input w-full px-3 py-2 text-sm"
           autoFocus
         />
         <textarea
@@ -6453,10 +6847,10 @@ function AddTaskForm({ onAdd, onCancel, team = [], t, language }) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
-          className="input-terminal w-full px-3 py-2 text-sm resize-none"
+          className="theme-input w-full px-3 py-2 text-sm resize-none"
         />
         <div className="flex items-center gap-3 flex-wrap">
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="input-terminal px-3 py-2 text-sm">
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="theme-input px-3 py-2 text-sm">
             <option value="high">{t ? t('common.high').toUpperCase() : 'HIGH'}</option>
             <option value="medium">{t ? t('common.medium').toUpperCase() : 'MEDIUM'}</option>
             <option value="low">{t ? t('common.low').toUpperCase() : 'LOW'}</option>
@@ -6465,7 +6859,7 @@ function AddTaskForm({ onAdd, onCancel, team = [], t, language }) {
             <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
-              className="input-terminal px-3 py-2 text-sm"
+              className="theme-input px-3 py-2 text-sm"
             >
               <option value="">{t ? t('features.unassigned') : 'Unassigned'}</option>
               {team.map(member => (
@@ -6477,7 +6871,7 @@ function AddTaskForm({ onAdd, onCancel, team = [], t, language }) {
           <button type="button" onClick={onCancel} className="px-4 py-2 font-mono text-xs text-gray-500 hover:text-white transition-all">
             {t ? t('common.cancel').toUpperCase() : 'CANCEL'}
           </button>
-          <button type="submit" disabled={!name.trim()} className="btn-terminal px-4 py-2 disabled:opacity-50">
+          <button type="submit" disabled={!name.trim()} className="theme-btn-primary px-4 py-2 disabled:opacity-50">
             {t ? t('common.add').toUpperCase() : 'ADD'}
           </button>
         </div>
@@ -6518,7 +6912,7 @@ function AddFeatureForm({ onAdd, onClose, team = [], t, language }) {
             placeholder="e.g. user-auth"
             value={id}
             onChange={(e) => setId(e.target.value)}
-            className="input-terminal w-full px-4 py-2.5 mt-2 text-sm"
+            className="theme-input w-full px-4 py-2.5 mt-2 text-sm"
           />
         </div>
         <div>
@@ -6528,7 +6922,7 @@ function AddFeatureForm({ onAdd, onClose, team = [], t, language }) {
             placeholder={t ? t('features.featureName') : "Feature name"}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="input-terminal w-full px-4 py-2.5 mt-2 text-sm"
+            className="theme-input w-full px-4 py-2.5 mt-2 text-sm"
             autoFocus
           />
         </div>
@@ -6539,12 +6933,12 @@ function AddFeatureForm({ onAdd, onClose, team = [], t, language }) {
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
-            className="input-terminal w-full px-4 py-2.5 mt-2 text-sm resize-none"
+            className="theme-input w-full px-4 py-2.5 mt-2 text-sm resize-none"
           />
         </div>
         <div>
           <label className="font-mono text-[10px] text-gray-500 tracking-wider">{t ? t('features.priority').toUpperCase() : 'PRIORITY'}</label>
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="input-terminal w-full px-4 py-2.5 mt-2 text-sm">
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="theme-input w-full px-4 py-2.5 mt-2 text-sm">
             <option value="high">{t ? t('common.high').toUpperCase() : 'HIGH'}</option>
             <option value="medium">{t ? t('common.medium').toUpperCase() : 'MEDIUM'}</option>
             <option value="low">{t ? t('common.low').toUpperCase() : 'LOW'}</option>
@@ -6556,7 +6950,7 @@ function AddFeatureForm({ onAdd, onClose, team = [], t, language }) {
             <select
               value={assignedTo}
               onChange={(e) => setAssignedTo(e.target.value)}
-              className="input-terminal w-full px-4 py-2.5 mt-2 text-sm"
+              className="theme-input w-full px-4 py-2.5 mt-2 text-sm"
             >
               <option value="">{t ? t('features.unassigned') : 'Unassigned'}</option>
               {team.map(member => (
@@ -6569,7 +6963,7 @@ function AddFeatureForm({ onAdd, onClose, team = [], t, language }) {
           <button type="button" onClick={onClose} className="flex-1 py-2.5 border border-white/20 text-gray-500 font-mono text-xs hover:bg-white/5 transition-all">
             {t ? t('common.cancel').toUpperCase() : 'CANCEL'}
           </button>
-          <button type="submit" disabled={!name.trim()} className="btn-terminal flex-1 py-2.5 disabled:opacity-50">
+          <button type="submit" disabled={!name.trim()} className="theme-btn-primary flex-1 py-2.5 disabled:opacity-50">
             {language === 'es' ? 'CREAR' : 'CREATE'}
           </button>
         </div>
@@ -6581,7 +6975,7 @@ function AddFeatureForm({ onAdd, onClose, team = [], t, language }) {
 function Modal({ children, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay animate-fade-in" onClick={onClose}>
-      <div className="terminal-card p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+      <div className="theme-card p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
         {children}
       </div>
     </div>
@@ -6618,7 +7012,7 @@ function ThemeModal({ roadmap, setRoadmap, setHasChanges, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay animate-fade-in" onClick={onClose}>
-      <div className="terminal-card p-6 max-w-lg w-full" onClick={e => e.stopPropagation()}>
+      <div className="theme-card p-6 max-w-lg w-full" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -6683,14 +7077,14 @@ function ThemeModal({ roadmap, setRoadmap, setHasChanges, onClose }) {
                 }
               }}
               placeholder="#00ff88"
-              className="input-terminal px-3 py-2 text-sm w-32 font-mono"
+              className="theme-input px-3 py-2 text-sm w-32 font-mono"
             />
             <input
               type="text"
               value={currentTheme.name}
               onChange={(e) => updateTheme({ ...currentTheme, name: e.target.value })}
               placeholder="Theme name"
-              className="input-terminal px-3 py-2 text-sm flex-1 font-mono"
+              className="theme-input px-3 py-2 text-sm flex-1 font-mono"
             />
           </div>
         </div>
@@ -6707,7 +7101,7 @@ function ThemeModal({ roadmap, setRoadmap, setHasChanges, onClose }) {
             </div>
             <div className="flex-1">
               <div className="font-mono text-xs text-white">{roadmap?.project_info?.name || 'Project'}</div>
-              <div className="progress-brutal mt-2 h-2">
+              <div className="theme-progress mt-2 h-2">
                 <div
                   className="h-full transition-all"
                   style={{
@@ -6761,9 +7155,9 @@ function LoginScreen({ onLogin, error }) {
         </div>
 
         {/* Login Form */}
-        <div className="terminal-card p-6">
+        <div className="theme-card p-6">
           <div className="flex items-center gap-3 mb-6">
-            <div className="led led-amber" />
+            <div className="led theme-led theme-led-warning" />
             <span className="font-mono text-xs text-signal tracking-wider">AUTHENTICATION REQUIRED</span>
           </div>
 
@@ -6777,7 +7171,7 @@ function LoginScreen({ onLogin, error }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="admin@localhost"
-                  className="input-terminal w-full pl-10 pr-4 py-3 text-sm"
+                  className="theme-input w-full pl-10 pr-4 py-3 text-sm"
                   autoComplete="email"
                   autoFocus
                 />
@@ -6793,7 +7187,7 @@ function LoginScreen({ onLogin, error }) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="input-terminal w-full pl-10 pr-4 py-3 text-sm"
+                  className="theme-input w-full pl-10 pr-4 py-3 text-sm"
                   autoComplete="current-password"
                 />
               </div>
@@ -6806,7 +7200,7 @@ function LoginScreen({ onLogin, error }) {
               </div>
             )}
 
-            <button type="submit" disabled={loading || !email.trim() || !password.trim()} className="btn-terminal w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50">
+            <button type="submit" disabled={loading || !email.trim() || !password.trim()} className="theme-btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50">
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -6968,11 +7362,13 @@ Update \`roadmap.json\` with:
 // Wrap App with providers
 function AppWithProviders() {
   return (
-    <ToastProvider>
-      <ActivityProvider>
-        <App />
-      </ActivityProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <ActivityProvider>
+          <App />
+        </ActivityProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

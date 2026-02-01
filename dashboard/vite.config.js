@@ -14,5 +14,8 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.PORT) || 6969,
     open: true
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client']
   }
 })

@@ -188,7 +188,8 @@ async function openDashboard(options) {
     const serverProcess = spawn('npm', ['run', 'dev'], {
       cwd: dashboardPath,
       stdio: 'inherit',
-      shell: true
+      shell: true,
+      env: { ...process.env, PROJECT_ROOT: projectRoot }
     });
 
     serverProcess.on('error', (error) => {

@@ -8,9 +8,15 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        // Matrix theme fonts
         display: ['Orbitron', 'system-ui', 'sans-serif'],
-        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
         mono: ['IBM Plex Mono', 'monospace'],
+        // Glass theme fonts
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        code: ['Fira Code', 'Consolas', 'monospace'],
+        // Theme-aware (use CSS vars)
+        heading: ['var(--font-heading)', 'system-ui', 'sans-serif'],
+        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
       },
       colors: {
         // Pure black base
