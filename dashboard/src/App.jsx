@@ -2952,9 +2952,27 @@ function TaskList({ tasks = [], featureId = '', onUpdateStatus, team = [], onAss
   };
 
   const statusConfig = {
-    completed: { led: 'theme-led theme-led-success', label: 'DONE', color: 'text-matrix' },
-    in_progress: { led: 'theme-led theme-led-warning', label: 'ACTIVE', color: 'text-signal' },
-    pending: { led: 'led-gray', label: 'QUEUE', color: 'text-gray-500' }
+    completed: {
+      icon: Check,
+      dotClass: 'status-dot status-dot-completed',
+      label: 'DONE',
+      color: 'text-emerald-500',
+      textClass: 'text-theme-secondary line-through'
+    },
+    in_progress: {
+      icon: Clock,
+      dotClass: 'status-dot status-dot-in-progress',
+      label: 'ACTIVE',
+      color: 'text-amber-500',
+      textClass: 'text-theme-primary'
+    },
+    pending: {
+      icon: Circle,
+      dotClass: 'status-dot status-dot-pending',
+      label: 'QUEUE',
+      color: 'text-theme-muted',
+      textClass: 'text-theme-secondary'
+    }
   };
 
   const priorityConfig = {
@@ -2988,21 +3006,23 @@ function TaskList({ tasks = [], featureId = '', onUpdateStatus, team = [], onAss
         return (
           <div key={task.id} className="task-row">
             {/* Header */}
-            <div className="flex items-center gap-3 p-3">
+            <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onUpdateStatus?.(featureId, task.id, cycleStatus(task.status));
                 }}
-                className="flex-shrink-0 p-2 hover:bg-white/5 transition-all"
+                className="flex-shrink-0 transition-transform hover:scale-110"
                 title={`Click to change status (Current: ${status.label})`}
               >
-                <div className={`led ${status.led}`} />
+                <div className={status.dotClass}>
+                  <status.icon className="w-3.5 h-3.5" />
+                </div>
               </button>
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className={`font-sans text-sm ${task.status === 'completed' ? 'text-gray-600 line-through' : 'text-gray-200'}`}>
+                  <h4 className={`text-sm font-medium ${status.textClass}`}>
                     {task.name}
                   </h4>
                   <span className={`font-mono text-[9px] ${priority.color}`}>[{priority.label}]</span>
@@ -3556,9 +3576,24 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges, t }) {
   });
 
   const statusConfig = {
-    pending: { led: 'led-gray', label: t('debt.pending'), color: 'text-gray-500' },
-    in_progress: { led: 'theme-led theme-led-warning', label: t('debt.inProgress'), color: 'text-signal' },
-    resolved: { led: 'theme-led theme-led-success', label: t('debt.resolved'), color: 'text-matrix' }
+    pending: {
+      icon: Circle,
+      dotClass: 'status-dot status-dot-pending',
+      label: t('debt.pending'),
+      color: 'text-theme-muted'
+    },
+    in_progress: {
+      icon: Clock,
+      dotClass: 'status-dot status-dot-in-progress',
+      label: t('debt.inProgress'),
+      color: 'text-amber-500'
+    },
+    resolved: {
+      icon: Check,
+      dotClass: 'status-dot status-dot-completed',
+      label: t('debt.resolved'),
+      color: 'text-emerald-500'
+    }
   };
 
   // Update debt status

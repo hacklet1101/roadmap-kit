@@ -4,55 +4,65 @@
 
 /* ============================================
    THEME: GLASS (Default)
-   Modern, clean interface inspired by CBC-WEB
+   Modern, elegant interface inspired by CBC-WEB
+   Clean typography, glassmorphism, status indicators
    ============================================ */
 @layer base {
   :root,
   [data-theme="glass"] {
-    /* Colors */
+    /* Colors - Light mode */
     --bg-primary: #f8fafc;
     --bg-secondary: #f1f5f9;
     --bg-card: rgba(255, 255, 255, 0.7);
     --bg-card-hover: rgba(255, 255, 255, 0.9);
     --bg-input: #ffffff;
-    --bg-sidebar: rgba(255, 255, 255, 0.5);
+    --bg-sidebar: rgba(255, 255, 255, 0.6);
+    --bg-muted: #e2e8f0;
 
-    --text-primary: #1e293b;
+    --text-primary: #0f172a;
     --text-secondary: #475569;
     --text-muted: #94a3b8;
     --text-inverse: #ffffff;
 
+    /* Accent colors */
     --accent-primary: #10b981;
     --accent-secondary: #f59e0b;
     --accent-tertiary: #3b82f6;
     --accent-danger: #ef4444;
 
-    --border-color: rgba(0, 0, 0, 0.08);
-    --border-color-strong: rgba(0, 0, 0, 0.15);
+    /* Status colors - matching CBC-WEB */
+    --status-completed: #10b981;
+    --status-completed-bg: rgba(16, 185, 129, 0.1);
+    --status-completed-border: rgba(16, 185, 129, 0.2);
+    --status-in-progress: #f59e0b;
+    --status-in-progress-bg: rgba(245, 158, 11, 0.1);
+    --status-in-progress-border: rgba(245, 158, 11, 0.2);
+    --status-pending: #94a3b8;
+    --status-pending-bg: rgba(148, 163, 184, 0.1);
+    --status-pending-border: rgba(148, 163, 184, 0.2);
+
+    --border-color: rgba(0, 0, 0, 0.06);
+    --border-color-strong: rgba(0, 0, 0, 0.12);
 
     /* Effects */
     --radius-sm: 0.5rem;
     --radius-md: 0.75rem;
     --radius-lg: 1rem;
-    --radius-xl: 1.5rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
     --shadow-glow: none;
 
-    --backdrop-blur: blur(12px);
+    --backdrop-blur: blur(16px);
     --transition: all 0.2s ease;
 
-    /* Typography */
-    --font-heading: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-body: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-mono: 'Fira Code', 'Consolas', monospace;
-
-    /* Status colors */
-    --status-completed: #10b981;
-    --status-in-progress: #f59e0b;
-    --status-pending: #94a3b8;
+    /* Typography - Inter for everything */
+    --font-heading: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'Fira Code', 'SF Mono', 'Consolas', monospace;
 
     /* Special */
     --scanlines: none;
@@ -66,17 +76,22 @@
   .dark[data-theme="glass"] {
     --bg-primary: #0f172a;
     --bg-secondary: #1e293b;
-    --bg-card: rgba(30, 41, 59, 0.7);
-    --bg-card-hover: rgba(30, 41, 59, 0.9);
-    --bg-input: #1e293b;
-    --bg-sidebar: rgba(15, 23, 42, 0.8);
+    --bg-card: rgba(30, 41, 59, 0.6);
+    --bg-card-hover: rgba(30, 41, 59, 0.8);
+    --bg-input: rgba(30, 41, 59, 0.8);
+    --bg-sidebar: rgba(15, 23, 42, 0.7);
+    --bg-muted: #334155;
 
     --text-primary: #f1f5f9;
     --text-secondary: #cbd5e1;
     --text-muted: #64748b;
 
-    --border-color: rgba(255, 255, 255, 0.08);
-    --border-color-strong: rgba(255, 255, 255, 0.15);
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-color-strong: rgba(255, 255, 255, 0.12);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -86,13 +101,13 @@
    ============================================ */
 @layer base {
   [data-theme="matrix"] {
-    /* Colors */
     --bg-primary: #000000;
     --bg-secondary: #0a0a0a;
     --bg-card: #0d0d0d;
     --bg-card-hover: #111111;
     --bg-input: #0a0a0a;
     --bg-sidebar: #050505;
+    --bg-muted: #1a1a1a;
 
     --text-primary: #e0e0e0;
     --text-secondary: #999999;
@@ -104,14 +119,24 @@
     --accent-tertiary: #00d4ff;
     --accent-danger: #ff3366;
 
+    --status-completed: #00ff88;
+    --status-completed-bg: rgba(0, 255, 136, 0.15);
+    --status-completed-border: rgba(0, 255, 136, 0.3);
+    --status-in-progress: #ff9500;
+    --status-in-progress-bg: rgba(255, 149, 0, 0.15);
+    --status-in-progress-border: rgba(255, 149, 0, 0.3);
+    --status-pending: #555555;
+    --status-pending-bg: rgba(85, 85, 85, 0.15);
+    --status-pending-border: rgba(85, 85, 85, 0.3);
+
     --border-color: rgba(0, 255, 136, 0.15);
     --border-color-strong: rgba(0, 255, 136, 0.3);
 
-    /* Effects */
     --radius-sm: 0;
     --radius-md: 0;
     --radius-lg: 0;
     --radius-xl: 0;
+    --radius-2xl: 0;
 
     --shadow-sm: none;
     --shadow-md: none;
@@ -121,32 +146,16 @@
     --backdrop-blur: none;
     --transition: all 0.2s ease;
 
-    /* Typography */
     --font-heading: 'Orbitron', 'IBM Plex Mono', monospace;
     --font-body: 'IBM Plex Mono', monospace;
     --font-mono: 'IBM Plex Mono', monospace;
 
-    /* Status colors */
-    --status-completed: #00ff88;
-    --status-in-progress: #ff9500;
-    --status-pending: #555555;
-
-    /* Special Matrix effects */
-    --scanlines: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.1) 2px,
-      rgba(0, 0, 0, 0.1) 4px
-    );
-    --grid-bg:
-      linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+    --scanlines: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.1) 2px, rgba(0, 0, 0, 0.1) 4px);
+    --grid-bg: linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
     --nav-indicator: var(--accent-primary);
     --card-border-glow: 0 0 10px rgba(0, 255, 136, 0.3);
   }
 
-  /* Matrix theme light mode - cyberpunk with lighter background */
   [data-theme="matrix"].light,
   .light[data-theme="matrix"] {
     --bg-primary: #1a1a2e;
@@ -166,7 +175,7 @@
 }
 
 /* ============================================
-   BASE STYLES (Theme-agnostic)
+   BASE STYLES
    ============================================ */
 @layer base {
   * {
@@ -174,7 +183,6 @@
   }
 
   ::selection {
-    background-color: rgba(var(--accent-primary), 0.3);
     background-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
     color: var(--text-primary);
   }
@@ -185,9 +193,10 @@
     font-family: var(--font-body);
     transition: var(--transition);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -199,20 +208,19 @@
 
   ::-webkit-scrollbar-thumb {
     background: var(--border-color-strong);
-    border-radius: var(--radius-sm);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: var(--accent-primary);
   }
 
-  /* Focus styles */
   input:focus,
   textarea:focus,
   select:focus {
     outline: none;
     border-color: var(--accent-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 15%, transparent);
   }
 }
 
@@ -220,23 +228,11 @@
    COMPONENT STYLES
    ============================================ */
 @layer components {
-  /* Card Dark - Base component for dark cards */
-  .card-dark {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    transition: var(--transition);
-  }
-
-  .card-dark:hover {
-    background: var(--bg-card-hover);
-    border-color: var(--border-color-strong);
-  }
-
-  /* Card */
+  /* Theme Card - Glassmorphism */
   .theme-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
     backdrop-filter: var(--backdrop-blur);
     box-shadow: var(--shadow-md);
     transition: var(--transition);
@@ -246,6 +242,20 @@
     background: var(--bg-card-hover);
     border-color: var(--border-color-strong);
     box-shadow: var(--shadow-lg), var(--card-border-glow);
+  }
+
+  /* Card Dark - for legacy compatibility */
+  .card-dark {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    backdrop-filter: var(--backdrop-blur);
+    transition: var(--transition);
+  }
+
+  .card-dark:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-color-strong);
   }
 
   /* Sidebar */
@@ -258,19 +268,21 @@
   /* Nav item */
   .theme-nav-item {
     font-family: var(--font-body);
+    font-weight: 500;
     color: var(--text-muted);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     transition: var(--transition);
   }
 
   .theme-nav-item:hover {
     color: var(--text-primary);
-    background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+    background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
   }
 
   .theme-nav-item.active {
-    color: var(--accent-primary);
-    background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+    color: var(--text-inverse);
+    background: var(--accent-primary);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-primary) 35%, transparent);
   }
 
   /* Button primary */
@@ -279,7 +291,7 @@
     color: var(--text-inverse);
     font-family: var(--font-body);
     font-weight: 500;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 0.625rem 1.25rem;
     transition: var(--transition);
     border: none;
@@ -287,7 +299,7 @@
 
   .theme-btn-primary:hover {
     filter: brightness(1.1);
-    box-shadow: var(--shadow-glow);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary) 35%, transparent);
   }
 
   /* Button secondary */
@@ -295,14 +307,15 @@
     background: transparent;
     color: var(--text-primary);
     font-family: var(--font-body);
+    font-weight: 500;
     border: 1px solid var(--border-color-strong);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     padding: 0.625rem 1.25rem;
     transition: var(--transition);
   }
 
   .theme-btn-secondary:hover {
-    background: var(--bg-card);
+    background: var(--bg-muted);
     border-color: var(--accent-primary);
   }
 
@@ -324,40 +337,118 @@
   /* Progress bar */
   .theme-progress {
     height: 6px;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-sm);
+    background: var(--bg-muted);
+    border-radius: 9999px;
     overflow: hidden;
   }
 
   .theme-progress-fill {
     height: 100%;
     background: var(--accent-primary);
-    border-radius: var(--radius-sm);
+    border-radius: 9999px;
     transition: width 0.5s ease-out;
   }
 
-  /* Badge / Status */
+  /* ========== STATUS INDICATORS (CBC-WEB Style) ========== */
+  .status-dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+  }
+
+  .status-dot-completed {
+    background: var(--status-completed-bg);
+    color: var(--status-completed);
+  }
+
+  .status-dot-in-progress {
+    background: var(--status-in-progress-bg);
+    color: var(--status-in-progress);
+  }
+
+  .status-dot-pending {
+    background: var(--status-pending-bg);
+    color: var(--status-pending);
+  }
+
+  /* Status badge */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .status-badge-completed {
+    background: var(--status-completed-bg);
+    color: var(--status-completed);
+    border: 1px solid var(--status-completed-border);
+  }
+
+  .status-badge-in-progress {
+    background: var(--status-in-progress-bg);
+    color: var(--status-in-progress);
+    border: 1px solid var(--status-in-progress-border);
+  }
+
+  .status-badge-pending {
+    background: var(--status-pending-bg);
+    color: var(--status-pending);
+    border: 1px solid var(--status-pending-border);
+  }
+
+  /* Stats card (like CBC-WEB) */
+  .stats-card {
+    text-align: center;
+    padding: 1rem;
+    border-radius: var(--radius-xl);
+    transition: var(--transition);
+  }
+
+  .stats-card-completed {
+    background: var(--status-completed-bg);
+    border: 1px solid var(--status-completed-border);
+  }
+
+  .stats-card-in-progress {
+    background: var(--status-in-progress-bg);
+    border: 1px solid var(--status-in-progress-border);
+  }
+
+  .stats-card-pending {
+    background: var(--status-pending-bg);
+    border: 1px solid var(--status-pending-border);
+  }
+
+  /* Badge / Status old style */
   .theme-badge {
-    font-family: var(--font-mono);
-    font-size: 0.625rem;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
   }
 
   .theme-badge-success {
-    background: color-mix(in srgb, var(--status-completed) 20%, transparent);
+    background: var(--status-completed-bg);
     color: var(--status-completed);
   }
 
   .theme-badge-warning {
-    background: color-mix(in srgb, var(--status-in-progress) 20%, transparent);
+    background: var(--status-in-progress-bg);
     color: var(--status-in-progress);
   }
 
   .theme-badge-muted {
-    background: color-mix(in srgb, var(--status-pending) 20%, transparent);
+    background: var(--status-pending-bg);
     color: var(--status-pending);
   }
 
@@ -370,8 +461,9 @@
   /* Headings */
   .theme-heading {
     font-family: var(--font-heading);
+    font-weight: 600;
     color: var(--text-primary);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
 
   /* Text styles */
@@ -379,19 +471,12 @@
   .theme-text-secondary { color: var(--text-secondary); }
   .theme-text-muted { color: var(--text-muted); }
   .theme-text-accent { color: var(--accent-primary); }
-
-  /* Accent colors */
-  .theme-accent-bg {
-    background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
-  }
 }
 
 /* ============================================
    MATRIX-SPECIFIC COMPONENTS
-   (Only apply when data-theme="matrix")
    ============================================ */
 [data-theme="matrix"] {
-  /* Terminal card style */
   .theme-card {
     position: relative;
   }
@@ -407,7 +492,6 @@
     opacity: 0.5;
   }
 
-  /* LED indicator */
   .theme-led {
     width: 8px;
     height: 8px;
@@ -429,7 +513,6 @@
   .theme-led-warning { background: var(--status-in-progress); }
   .theme-led-danger { background: var(--accent-danger); }
 
-  /* Nav item terminal style */
   .theme-nav-item {
     font-family: var(--font-mono);
     letter-spacing: 0.05em;
@@ -455,37 +538,21 @@
   .theme-nav-item.active {
     border-left: 2px solid var(--accent-primary);
     border-radius: 0;
+    background: transparent;
+    color: var(--accent-primary);
+    box-shadow: none;
   }
 
-  /* Glow text effect */
   .theme-text-glow {
     text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
   }
 
-  /* Button terminal style */
   .theme-btn-primary {
     font-family: var(--font-mono);
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    position: relative;
-    overflow: hidden;
   }
 
-  .theme-btn-primary::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: var(--accent-primary);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: -1;
-  }
-
-  .theme-btn-primary:hover::before {
-    transform: translateX(0);
-  }
-
-  /* Scanlines overlay */
   .theme-scanlines::after {
     content: '';
     pointer-events: none;
@@ -497,292 +564,124 @@
 }
 
 /* ============================================
-   GLASS-SPECIFIC COMPONENTS
-   (Only apply when data-theme="glass")
+   GLASS-SPECIFIC OVERRIDES
+   Clean, modern, elegant design
    ============================================ */
 [data-theme="glass"] {
-  /* Softer card shadows */
+  /* Card shadows */
   .theme-card {
-    box-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.08),
-      0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
 
   .theme-card:hover {
-    box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.1),
-      0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: translateY(-1px);
   }
 
-  /* Rounded nav items */
-  .theme-nav-item.active {
-    background: var(--accent-primary);
-    color: white;
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-primary) 40%, transparent);
-  }
-
-  /* Progress with rounded ends */
-  .theme-progress,
-  .theme-progress-fill {
-    border-radius: 9999px;
-  }
-
-  /* ========== GLASS CARD OVERRIDES ========== */
   .card-dark {
-    background: var(--bg-card) !important;
+    background: var(--bg-card);
     backdrop-filter: var(--backdrop-blur);
-    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-xl);
   }
 
-  .card-dark:hover {
-    box-shadow: var(--shadow-md);
+  /* Typography - ALL sans-serif */
+  * {
+    font-family: var(--font-body);
   }
 
-  /* ========== GLASS TYPOGRAPHY OVERRIDES ========== */
-  /* Use clean sans-serif for most UI elements instead of monospace */
-  /* This creates a modern, clean aesthetic while preserving code blocks */
-
-  /* MASTER OVERRIDE: All font-mono elements use body font (except code) */
-  .font-mono {
+  .font-mono:not(code):not(pre):not(kbd) {
     font-family: var(--font-body) !important;
-    letter-spacing: -0.01em !important;
+    letter-spacing: -0.01em;
   }
 
-  /* PRESERVE: Keep monospace ONLY for actual code elements */
-  code,
-  pre,
-  pre *,
-  code *,
-  .code-block,
-  .code-block *,
-  [data-code],
-  [data-code] *,
-  kbd,
-  .theme-input code,
-  textarea.font-mono,
-  pre.font-mono,
-  code.font-mono {
+  code, pre, kbd, .code-block {
     font-family: var(--font-mono) !important;
-    letter-spacing: 0 !important;
   }
 
-  /* Override font-display to use heading font with semi-bold weight */
   .font-display {
     font-family: var(--font-heading) !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.02em !important;
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
-  /* Remove terminal-style wide tracking (creates cleaner look) */
-  .tracking-wider,
-  .tracking-widest {
-    letter-spacing: 0.01em !important;
-  }
-
-  /* Uppercase labels - refined appearance */
-  .uppercase {
-    font-weight: 600 !important;
-    letter-spacing: 0.03em !important;
-  }
-
-  /* Headings and titles - use heading font */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading) !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.02em !important;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.02em;
   }
 
-  /* Large text classes - heading font */
-  .text-xl,
-  .text-2xl,
-  .text-3xl,
-  .text-4xl,
-  .text-lg {
-    font-family: var(--font-heading) !important;
-    letter-spacing: -0.02em !important;
-  }
-
-  /* Stats and numbers - use tabular figures for alignment */
-  .font-display.text-lg,
-  .font-display.text-xl,
-  .font-display.text-2xl,
-  .font-display.text-3xl,
-  .font-display.text-4xl {
-    font-variant-numeric: tabular-nums !important;
-    font-weight: 700 !important;
-  }
-
-  /* Buttons - clean modern style with medium weight */
-  button,
-  .btn,
-  [role="button"] {
-    font-family: var(--font-body) !important;
-    font-weight: 500 !important;
+  .tracking-wider, .tracking-widest {
     letter-spacing: 0 !important;
   }
 
-  /* Small text classes - body font with medium weight */
-  .text-xs,
-  .text-sm {
-    font-family: var(--font-body) !important;
-    font-weight: 500 !important;
+  button, select, input, textarea {
+    font-family: var(--font-body);
   }
 
-  /* Tiny text - slightly lighter */
-  .text-\[10px\],
-  .text-\[11px\],
-  .text-\[9px\] {
-    font-family: var(--font-body) !important;
-    font-weight: 500 !important;
-  }
-
-  /* Section headers with # prefix - treat like titles */
-  h3.font-mono,
-  h4.font-mono {
-    font-family: var(--font-heading) !important;
-    font-weight: 600 !important;
-  }
-
-  /* Table text - cleaner look */
-  table,
-  th,
-  td {
-    font-family: var(--font-body) !important;
-  }
-
-  /* Select and input elements */
-  select,
-  input,
-  textarea {
-    font-family: var(--font-body) !important;
-  }
-
-  /* Labels in forms */
-  label {
-    font-family: var(--font-body) !important;
-    font-weight: 500 !important;
-  }
-
-  /* Badges and pills - consistent styling */
-  .px-2.py-1,
-  .px-2\.5.py-1,
-  .px-2.py-0\.5,
-  .px-3.py-1,
-  .px-3.py-1\.5 {
-    font-family: var(--font-body) !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.01em !important;
-  }
-
-  /* Keyboard shortcuts - keep monospace */
-  kbd {
-    font-family: var(--font-mono) !important;
-    font-size: 0.75em !important;
-    background: var(--bg-secondary);
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  /* Modal and dialog headings */
-  [role="dialog"] h2,
-  [role="dialog"] h3,
-  [role="alertdialog"] h2,
-  [role="alertdialog"] h3 {
-    font-family: var(--font-heading) !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.02em !important;
-  }
-
-  /* Remove Matrix-style effects */
-  .crt-glow,
-  .text-glow,
-  .glow-matrix {
+  /* Remove Matrix effects */
+  .crt-glow, .text-glow, .glow-matrix {
     text-shadow: none !important;
-    box-shadow: none !important;
   }
 
-  /* Replace glow with subtle shadow */
   .glow-matrix {
     box-shadow: var(--shadow-md) !important;
   }
 
-  /* Softer colors for gray text - use theme variables */
-  .text-gray-600 {
-    color: var(--text-muted) !important;
-  }
+  /* Color mapping */
+  .text-matrix { color: var(--status-completed) !important; }
+  .text-cyber { color: var(--accent-tertiary) !important; }
+  .text-signal { color: var(--status-in-progress) !important; }
+  .text-alert { color: var(--accent-danger) !important; }
+  .text-white { color: var(--text-primary) !important; }
 
-  .text-gray-500 {
-    color: var(--text-secondary) !important;
-  }
+  .text-gray-400, .text-gray-500, .text-gray-600 { color: var(--text-muted) !important; }
+  .text-gray-300 { color: var(--text-secondary) !important; }
 
-  .text-gray-400 {
-    color: var(--text-secondary) !important;
-  }
+  .bg-void-100, .bg-void-50 { background: var(--bg-secondary) !important; }
+  .bg-black, .bg-void { background: var(--bg-primary) !important; }
 
-  .text-gray-700,
-  .text-gray-800 {
-    color: var(--text-muted) !important;
-  }
+  .border-white\/10, .border-white\/5 { border-color: var(--border-color) !important; }
+  .border-white\/20 { border-color: var(--border-color-strong) !important; }
 
-  /* Status text colors - use CSS variables for consistency */
-  .text-matrix {
-    color: var(--accent-primary) !important;
-  }
+  .bg-white\/5, .bg-white\/10 { background: var(--bg-muted) !important; }
+  .hover\:bg-white\/5:hover { background: var(--bg-muted) !important; }
 
-  .text-cyber {
-    color: var(--accent-tertiary) !important;
-  }
+  /* Status colors */
+  .bg-emerald-500\/10, .bg-emerald-500\/20 { background: var(--status-completed-bg) !important; }
+  .border-emerald-500\/20, .border-emerald-500\/30 { border-color: var(--status-completed-border) !important; }
+  .text-emerald-500, .text-emerald-400 { color: var(--status-completed) !important; }
 
-  .text-signal {
-    color: var(--accent-secondary) !important;
-  }
+  .bg-amber-500\/10, .bg-amber-500\/20 { background: var(--status-in-progress-bg) !important; }
+  .border-amber-500\/20, .border-amber-500\/30 { border-color: var(--status-in-progress-border) !important; }
+  .text-amber-500, .text-amber-400 { color: var(--status-in-progress) !important; }
 
-  .text-alert {
-    color: var(--accent-danger) !important;
-  }
+  .bg-rose-500\/10, .bg-rose-500\/5 { background: color-mix(in srgb, var(--accent-danger) 10%, transparent) !important; }
+  .border-rose-500\/20, .border-rose-500\/30 { border-color: color-mix(in srgb, var(--accent-danger) 20%, transparent) !important; }
+  .text-rose-500, .text-rose-400 { color: var(--accent-danger) !important; }
 
-  /* Border colors - softer in Glass theme */
-  .border-matrix\/30,
-  .border-matrix\/20,
-  .border-matrix\/50 {
-    border-color: color-mix(in srgb, var(--accent-primary) 20%, var(--border-color)) !important;
-  }
+  .bg-blue-500\/10, .bg-blue-500\/5 { background: color-mix(in srgb, var(--accent-tertiary) 10%, transparent) !important; }
+  .border-blue-500\/20, .border-blue-500\/30 { border-color: color-mix(in srgb, var(--accent-tertiary) 20%, transparent) !important; }
+  .text-blue-500, .text-blue-400 { color: var(--accent-tertiary) !important; }
 
-  .border-cyber\/30,
-  .border-cyber\/20 {
-    border-color: color-mix(in srgb, var(--accent-tertiary) 20%, var(--border-color)) !important;
-  }
+  .bg-cyan-500\/10, .bg-cyan-500\/5 { background: color-mix(in srgb, #06b6d4 10%, transparent) !important; }
+  .border-cyan-500\/20, .border-cyan-500\/30 { border-color: color-mix(in srgb, #06b6d4 20%, transparent) !important; }
+  .text-cyan-500, .text-cyan-400 { color: #06b6d4 !important; }
 
-  .border-signal\/30,
-  .border-signal\/20 {
-    border-color: color-mix(in srgb, var(--accent-secondary) 20%, var(--border-color)) !important;
-  }
+  .bg-teal-500\/10 { background: color-mix(in srgb, #14b8a6 10%, transparent) !important; }
+  .text-teal-500 { color: #14b8a6 !important; }
 
-  /* Background tints - very subtle */
-  .bg-matrix\/5,
-  .bg-matrix\/10 {
-    background: color-mix(in srgb, var(--accent-primary) 5%, var(--bg-card)) !important;
-  }
+  /* Matrix colors -> Glass equivalents */
+  .bg-matrix\/5, .bg-matrix\/10 { background: var(--status-completed-bg) !important; }
+  .border-matrix\/20, .border-matrix\/30, .border-matrix\/50 { border-color: var(--status-completed-border) !important; }
 
-  .bg-cyber\/5,
-  .bg-cyber\/10 {
-    background: color-mix(in srgb, var(--accent-tertiary) 5%, var(--bg-card)) !important;
-  }
+  .bg-signal\/5, .bg-signal\/10 { background: var(--status-in-progress-bg) !important; }
+  .border-signal\/20, .border-signal\/30 { border-color: var(--status-in-progress-border) !important; }
 
-  .bg-signal\/5,
-  .bg-signal\/10 {
-    background: color-mix(in srgb, var(--accent-secondary) 5%, var(--bg-card)) !important;
-  }
+  .bg-cyber\/5, .bg-cyber\/10 { background: color-mix(in srgb, var(--accent-tertiary) 10%, transparent) !important; }
+  .border-cyber\/20, .border-cyber\/30 { border-color: color-mix(in srgb, var(--accent-tertiary) 20%, transparent) !important; }
 
-  /* void backgrounds - use theme card color */
-  .bg-void-100 {
-    background: var(--bg-secondary) !important;
-  }
-
-  /* White text - use theme primary */
-  .text-white {
-    color: var(--text-primary) !important;
-  }
+  .bg-alert\/5, .bg-alert\/10 { background: color-mix(in srgb, var(--accent-danger) 10%, transparent) !important; }
+  .border-alert\/20, .border-alert\/30 { border-color: color-mix(in srgb, var(--accent-danger) 20%, transparent) !important; }
 }
 
 /* ============================================
@@ -791,7 +690,6 @@
 @layer utilities {
   .font-heading { font-family: var(--font-heading); }
   .font-body { font-family: var(--font-body); }
-  .font-mono { font-family: var(--font-mono); }
 
   .bg-primary { background: var(--bg-primary); }
   .bg-secondary { background: var(--bg-secondary); }
@@ -809,6 +707,7 @@
   .rounded-theme-md { border-radius: var(--radius-md); }
   .rounded-theme-lg { border-radius: var(--radius-lg); }
   .rounded-theme-xl { border-radius: var(--radius-xl); }
+  .rounded-theme-2xl { border-radius: var(--radius-2xl); }
 }
 
 /* ============================================
@@ -820,14 +719,8 @@
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulse-glow {
@@ -841,120 +734,33 @@
 
 /* ============================================
    COMPATIBILITY LAYER
-   Maps old Matrix-specific classes to theme vars
    ============================================ */
+.text-matrix { color: var(--accent-primary); }
+.text-cyber { color: var(--accent-tertiary); }
+.text-signal { color: var(--accent-secondary); }
+.text-alert { color: var(--accent-danger); }
 
-/* Text colors - map to theme variables */
-.text-matrix { color: var(--accent-primary) !important; }
-.text-cyber { color: var(--accent-tertiary) !important; }
-.text-signal { color: var(--accent-secondary) !important; }
-.text-alert { color: var(--accent-danger) !important; }
-.text-white { color: var(--text-primary) !important; }
+.border-matrix { border-color: var(--accent-primary); }
+.border-cyber { border-color: var(--accent-tertiary); }
+.border-signal { border-color: var(--accent-secondary); }
+.border-alert { border-color: var(--accent-danger); }
 
-/* Background colors */
-.bg-black { background: var(--bg-primary) !important; }
-.bg-black\/80 { background: color-mix(in srgb, var(--bg-primary) 90%, transparent) !important; }
-.bg-black\/95 { background: color-mix(in srgb, var(--bg-primary) 98%, transparent) !important; }
-.bg-black\/50 { background: color-mix(in srgb, var(--bg-primary) 70%, transparent) !important; }
-.bg-black\/30 { background: color-mix(in srgb, var(--bg-primary) 50%, transparent) !important; }
-.bg-void { background: var(--bg-primary) !important; }
-.bg-void-50 { background: var(--bg-secondary) !important; }
-.bg-void-100 { background: var(--bg-card) !important; }
-.bg-void-200 { background: var(--bg-card) !important; }
+.bg-matrix\/10 { background: color-mix(in srgb, var(--accent-primary) 10%, transparent); }
+.bg-matrix\/20 { background: color-mix(in srgb, var(--accent-primary) 20%, transparent); }
+.bg-cyber\/10 { background: color-mix(in srgb, var(--accent-tertiary) 10%, transparent); }
+.bg-signal\/10 { background: color-mix(in srgb, var(--accent-secondary) 10%, transparent); }
+.bg-alert\/10 { background: color-mix(in srgb, var(--accent-danger) 10%, transparent); }
 
-/* Border colors */
-.border-matrix { border-color: var(--accent-primary) !important; }
-.border-cyber { border-color: var(--accent-tertiary) !important; }
-.border-signal { border-color: var(--accent-secondary) !important; }
-.border-alert { border-color: var(--accent-danger) !important; }
+.border-matrix\/30 { border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent); }
+.border-matrix\/50 { border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent); }
+.border-cyber\/30 { border-color: color-mix(in srgb, var(--accent-tertiary) 30%, transparent); }
+.border-signal\/30 { border-color: color-mix(in srgb, var(--accent-secondary) 30%, transparent); }
+.border-alert\/30 { border-color: color-mix(in srgb, var(--accent-danger) 30%, transparent); }
 
-/* Opacity variants using color-mix */
-.text-matrix\/50 { color: color-mix(in srgb, var(--accent-primary) 50%, transparent) !important; }
-.text-matrix\/30 { color: color-mix(in srgb, var(--accent-primary) 30%, transparent) !important; }
-.bg-matrix\/10 { background: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important; }
-.bg-matrix\/20 { background: color-mix(in srgb, var(--accent-primary) 20%, transparent) !important; }
-.bg-matrix\/5 { background: color-mix(in srgb, var(--accent-primary) 5%, transparent) !important; }
-.border-matrix\/50 { border-color: color-mix(in srgb, var(--accent-primary) 50%, transparent) !important; }
-.border-matrix\/30 { border-color: color-mix(in srgb, var(--accent-primary) 30%, transparent) !important; }
-.border-matrix\/20 { border-color: color-mix(in srgb, var(--accent-primary) 20%, transparent) !important; }
-.border-matrix\/15 { border-color: color-mix(in srgb, var(--accent-primary) 15%, transparent) !important; }
-.border-matrix\/10 { border-color: color-mix(in srgb, var(--accent-primary) 10%, transparent) !important; }
-
-.bg-cyber\/10 { background: color-mix(in srgb, var(--accent-tertiary) 10%, transparent) !important; }
-.bg-cyber\/20 { background: color-mix(in srgb, var(--accent-tertiary) 20%, transparent) !important; }
-.border-cyber\/50 { border-color: color-mix(in srgb, var(--accent-tertiary) 50%, transparent) !important; }
-.border-cyber\/30 { border-color: color-mix(in srgb, var(--accent-tertiary) 30%, transparent) !important; }
-
-.bg-signal\/10 { background: color-mix(in srgb, var(--accent-secondary) 10%, transparent) !important; }
-.bg-signal\/20 { background: color-mix(in srgb, var(--accent-secondary) 20%, transparent) !important; }
-.border-signal\/50 { border-color: color-mix(in srgb, var(--accent-secondary) 50%, transparent) !important; }
-
-.bg-alert\/10 { background: color-mix(in srgb, var(--accent-danger) 10%, transparent) !important; }
-.bg-alert\/20 { background: color-mix(in srgb, var(--accent-danger) 20%, transparent) !important; }
-.border-alert\/50 { border-color: color-mix(in srgb, var(--accent-danger) 50%, transparent) !important; }
-
-/* White opacity variants */
-.border-white\/10 { border-color: color-mix(in srgb, var(--text-primary) 10%, transparent) !important; }
-.border-white\/5 { border-color: color-mix(in srgb, var(--text-primary) 5%, transparent) !important; }
-.border-white\/20 { border-color: color-mix(in srgb, var(--text-primary) 20%, transparent) !important; }
-.bg-white\/5 { background: color-mix(in srgb, var(--text-primary) 5%, transparent) !important; }
-.bg-white\/10 { background: color-mix(in srgb, var(--text-primary) 10%, transparent) !important; }
-.hover\:bg-white\/5:hover { background: color-mix(in srgb, var(--text-primary) 5%, transparent) !important; }
-.hover\:bg-white\/\[0\.02\]:hover { background: color-mix(in srgb, var(--text-primary) 2%, transparent) !important; }
-.hover\:bg-white\/\[0\.01\]:hover { background: color-mix(in srgb, var(--text-primary) 1%, transparent) !important; }
-
-/* Gray text compatibility */
-.text-gray-100 { color: var(--text-primary) !important; }
-.text-gray-200 { color: var(--text-primary) !important; }
-.text-gray-300 { color: var(--text-secondary) !important; }
-.text-gray-400 { color: var(--text-secondary) !important; }
-.text-gray-500 { color: var(--text-muted) !important; }
-.text-gray-600 { color: var(--text-muted) !important; }
-.text-gray-700 { color: color-mix(in srgb, var(--text-muted) 70%, transparent) !important; }
-.text-slate-100 { color: var(--text-primary) !important; }
-
-/* Hover states */
-.hover\:text-matrix:hover { color: var(--accent-primary) !important; }
-.hover\:text-white:hover { color: var(--text-primary) !important; }
-.hover\:text-gray-300:hover { color: var(--text-secondary) !important; }
-.hover\:border-matrix:hover { border-color: var(--accent-primary) !important; }
-
-/* Focus states */
-.focus\:border-matrix:focus { border-color: var(--accent-primary) !important; }
-.focus\:ring-matrix:focus { --tw-ring-color: var(--accent-primary) !important; }
-
-/* LED compatibility */
-.led {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  position: relative;
-}
-
-.led::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: inherit;
-  filter: blur(4px);
-  opacity: 0.6;
-}
-
-.led-gray {
-  background: var(--text-muted);
-}
-
-.led-gray::after {
-  opacity: 0;
-}
-
-/* Glow utilities */
 .glow-matrix { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary) 30%, transparent); }
 .glow-signal { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-secondary) 30%, transparent); }
 .glow-cyber { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-tertiary) 30%, transparent); }
 .glow-alert { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-danger) 30%, transparent); }
 
-/* Font compatibility */
-.font-mono { font-family: var(--font-mono) !important; }
-.font-display { font-family: var(--font-heading) !important; }
+.led { width: 8px; height: 8px; border-radius: 50%; }
+.led-gray { background: var(--text-muted); }
