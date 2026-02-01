@@ -1,6 +1,6 @@
 {
   "name": "roadmap-kit",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "AI-powered project management for Vibe Coding. Track features, tasks, and technical debt with a visual dashboard.",
   "main": "cli.js",
   "type": "module",
