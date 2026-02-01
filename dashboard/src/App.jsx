@@ -400,7 +400,7 @@ const translations = {
       setup: 'SETUP',
       features: 'FEATURES',
       resources: 'RESOURCES',
-      debt: 'DEBT',
+      debt: 'TECH DEBT',
       info: 'INFO',
       settings: 'SETTINGS',
       help: 'HELP'
@@ -514,7 +514,39 @@ const translations = {
       effort: 'Effort',
       source: 'Source',
       bySeverity: 'BY SEVERITY',
-      items: 'items'
+      items: 'items',
+      // Severity levels
+      high: 'HIGH',
+      medium: 'MEDIUM',
+      low: 'LOW',
+      // Status
+      status: 'STATUS',
+      pending: 'PENDING',
+      inProgress: 'IN PROGRESS',
+      resolved: 'RESOLVED',
+      // Actions
+      filter: 'FILTER',
+      all: 'ALL',
+      clear: 'CLEAR',
+      addDebt: 'ADD DEBT',
+      addFirstDebt: 'ADD FIRST DEBT',
+      noMatch: 'NO ITEMS MATCH FILTERS',
+      // Details
+      description: 'DESCRIPTION',
+      impact: 'IMPACT',
+      solution: 'PROPOSED SOLUTION',
+      affectedFiles: 'AFFECTED FILES',
+      feature: 'FEATURE',
+      task: 'TASK',
+      priority: 'PRIORITY',
+      notEstimated: 'Not estimated',
+      // Dates
+      created: 'Created',
+      resolvedAt: 'Resolved',
+      assigned: 'Assigned',
+      due: 'Due',
+      // Schema
+      jsonSchema: 'JSON SCHEMA FOR TECHNICAL DEBT'
     },
     // Info
     info: {
@@ -746,7 +778,7 @@ const translations = {
       setup: 'ASISTENTE',
       features: 'ESTADO',
       resources: 'RECURSOS',
-      debt: 'DEUDA',
+      debt: 'DEUDA TÉCNICA',
       info: 'INFO',
       settings: 'CONFIG',
       help: 'AYUDA'
@@ -860,7 +892,39 @@ const translations = {
       effort: 'Esfuerzo',
       source: 'Origen',
       bySeverity: 'POR SEVERIDAD',
-      items: 'elementos'
+      items: 'elementos',
+      // Niveles de severidad
+      high: 'ALTA',
+      medium: 'MEDIA',
+      low: 'BAJA',
+      // Estado
+      status: 'ESTADO',
+      pending: 'PENDIENTE',
+      inProgress: 'EN PROGRESO',
+      resolved: 'RESUELTO',
+      // Acciones
+      filter: 'FILTRAR',
+      all: 'TODOS',
+      clear: 'LIMPIAR',
+      addDebt: 'AÑADIR DEUDA',
+      addFirstDebt: 'AÑADIR PRIMERA DEUDA',
+      noMatch: 'NINGÚN ELEMENTO COINCIDE CON LOS FILTROS',
+      // Detalles
+      description: 'DESCRIPCIÓN',
+      impact: 'IMPACTO',
+      solution: 'SOLUCIÓN PROPUESTA',
+      affectedFiles: 'ARCHIVOS AFECTADOS',
+      feature: 'CARACTERÍSTICA',
+      task: 'TAREA',
+      priority: 'PRIORIDAD',
+      notEstimated: 'Sin estimar',
+      // Fechas
+      created: 'Creado',
+      resolvedAt: 'Resuelto',
+      assigned: 'Asignado',
+      due: 'Vence',
+      // Schema
+      jsonSchema: 'ESQUEMA JSON PARA DEUDA TÉCNICA'
     },
     // Info
     info: {
@@ -1938,7 +2002,7 @@ function App() {
           )}
           {activeTab === 'metrics' && <MetricsTab roadmap={roadmap} language={language} />}
           {activeTab === 'resources' && <ResourcesTab resources={projectInfo.shared_resources || {}} />}
-          {activeTab === 'debt' && <DebtTab roadmap={roadmap} setRoadmap={setRoadmap} setHasChanges={setHasChanges} />}
+          {activeTab === 'debt' && <DebtTab roadmap={roadmap} setRoadmap={setRoadmap} setHasChanges={setHasChanges} t={t} />}
           {activeTab === 'info' && <InfoTab projectInfo={projectInfo} />}
           {activeTab === 'settings' && <SettingsTab roadmap={roadmap} setRoadmap={setRoadmap} setHasChanges={setHasChanges} authState={authState} showConfirm={showConfirm} showAlert={showAlert} t={t} language={language} changeLanguage={changeLanguage} />}
           {activeTab === 'help' && <HelpTab t={t} language={language} />}
@@ -3448,7 +3512,7 @@ function ResourcesTab({ resources }) {
 }
 
 // ============ DEBT TAB ============
-function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
+function DebtTab({ roadmap, setRoadmap, setHasChanges, t }) {
   const [expandedDebt, setExpandedDebt] = useState(null);
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -3492,9 +3556,9 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
   });
 
   const statusConfig = {
-    pending: { led: 'led-gray', label: 'PENDING', color: 'text-gray-500' },
-    in_progress: { led: 'theme-led theme-led-warning', label: 'IN PROGRESS', color: 'text-signal' },
-    resolved: { led: 'theme-led theme-led-success', label: 'RESOLVED', color: 'text-matrix' }
+    pending: { led: 'led-gray', label: t('debt.pending'), color: 'text-gray-500' },
+    in_progress: { led: 'theme-led theme-led-warning', label: t('debt.inProgress'), color: 'text-signal' },
+    resolved: { led: 'theme-led theme-led-success', label: t('debt.resolved'), color: 'text-matrix' }
   };
 
   // Update debt status
@@ -3578,7 +3642,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Summary */}
+      {/* Resumen */}
       <div className="grid grid-cols-3 gap-4">
         <button
           onClick={() => setFilterSeverity(filterSeverity === 'high' ? 'all' : 'high')}
@@ -3586,7 +3650,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
         >
           <div className="flex items-center gap-3 mb-3">
             <div className="led theme-led theme-led-danger" />
-            <span className="font-mono text-[10px] text-gray-500 tracking-wider">HIGH</span>
+            <span className="font-mono text-[10px] text-gray-500 tracking-wider">{t('debt.high')}</span>
           </div>
           <div className="metric-display text-3xl text-alert">{bySeverity.high.length}</div>
         </button>
@@ -3596,7 +3660,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
         >
           <div className="flex items-center gap-3 mb-3">
             <div className="led theme-led theme-led-warning" />
-            <span className="font-mono text-[10px] text-gray-500 tracking-wider">MEDIUM</span>
+            <span className="font-mono text-[10px] text-gray-500 tracking-wider">{t('debt.medium')}</span>
           </div>
           <div className="metric-display text-3xl text-signal">{bySeverity.medium.length}</div>
         </button>
@@ -3606,42 +3670,42 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
         >
           <div className="flex items-center gap-3 mb-3">
             <div className="led theme-led theme-led-success" />
-            <span className="font-mono text-[10px] text-gray-500 tracking-wider">LOW</span>
+            <span className="font-mono text-[10px] text-gray-500 tracking-wider">{t('debt.low')}</span>
           </div>
           <div className="metric-display text-3xl text-cyber">{bySeverity.low.length}</div>
         </button>
       </div>
 
-      {/* Filters & Add Button */}
+      {/* Filtros y Botón Añadir */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="font-mono text-[10px] text-gray-600">FILTER:</span>
+        <span className="font-mono text-[10px] text-gray-600">{t('debt.filter')}:</span>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           className="theme-input px-3 py-2 text-xs"
         >
-          <option value="all">ALL STATUS</option>
-          <option value="pending">PENDING</option>
-          <option value="in_progress">IN PROGRESS</option>
-          <option value="resolved">RESOLVED</option>
+          <option value="all">{t('debt.all')}</option>
+          <option value="pending">{t('debt.pending')}</option>
+          <option value="in_progress">{t('debt.inProgress')}</option>
+          <option value="resolved">{t('debt.resolved')}</option>
         </select>
         {(filterSeverity !== 'all' || filterStatus !== 'all') && (
           <button
             onClick={() => { setFilterSeverity('all'); setFilterStatus('all'); }}
             className="font-mono text-[10px] text-gray-500 hover:text-white transition-all"
           >
-            CLEAR
+            {t('debt.clear')}
           </button>
         )}
         <span className="font-mono text-[10px] text-gray-600">
-          {filteredDebts.length} / {allDebts.length} items
+          {filteredDebts.length} / {allDebts.length} {t('debt.items')}
         </span>
         <button
           onClick={() => setShowAddDebt(true)}
           className="ml-auto theme-btn-primary flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          ADD DEBT
+          {t('debt.addDebt')}
         </button>
       </div>
 
@@ -3658,7 +3722,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
       {/* Debt Items */}
       {filteredDebts.length > 0 ? (
         <div className="theme-card p-5">
-          <h3 className="font-mono text-sm text-signal tracking-wider mb-4"># TECHNICAL_DEBT</h3>
+          <h3 className="font-mono text-sm text-signal tracking-wider mb-4"># {t('debt.title')}</h3>
           <div className="space-y-2">
             {filteredDebts.map((debt) => {
               const isExpanded = expandedDebt === debt.id;
@@ -3707,9 +3771,9 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
                   {/* Expanded Content */}
                   {isExpanded && !isEditing && (
                     <div className="px-4 pb-4 pt-2 border-t border-white/5 space-y-4 animate-fade-in">
-                      {/* Status Controls */}
+                      {/* Controles de Estado */}
                       <div className="flex items-center gap-2 p-3 bg-black/30 border border-white/5">
-                        <span className="font-mono text-[10px] text-gray-600">STATUS:</span>
+                        <span className="font-mono text-[10px] text-gray-600">{t('debt.status')}:</span>
                         <div className="flex gap-1">
                           {['pending', 'in_progress', 'resolved'].map((s) => {
                             const cfg = statusConfig[s];
@@ -3746,36 +3810,36 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
                         </div>
                       </div>
 
-                      {/* Full Description */}
+                      {/* Descripción Completa */}
                       <div>
-                        <h5 className="font-mono text-[10px] text-gray-600 tracking-wider mb-2"># DESCRIPTION</h5>
+                        <h5 className="font-mono text-[10px] text-gray-600 tracking-wider mb-2"># {t('debt.description')}</h5>
                         <p className="font-mono text-xs text-gray-400">{debt.description}</p>
                       </div>
 
-                      {/* Impact */}
+                      {/* Impacto */}
                       {debt.impact && (
                         <div className="p-3 border border-alert/20 bg-alert/5">
                           <h5 className="font-mono text-[10px] text-alert tracking-wider mb-2 flex items-center gap-2">
-                            <AlertTriangle className="w-3 h-3" /> IMPACT
+                            <AlertTriangle className="w-3 h-3" /> {t('debt.impact')}
                           </h5>
                           <p className="font-mono text-xs text-gray-400">{debt.impact}</p>
                         </div>
                       )}
 
-                      {/* Solution */}
+                      {/* Solución */}
                       {debt.solution && (
                         <div className="p-3 border border-matrix/20 bg-matrix/5">
                           <h5 className="font-mono text-[10px] text-matrix tracking-wider mb-2 flex items-center gap-2">
-                            <Wrench className="w-3 h-3" /> PROPOSED SOLUTION
+                            <Wrench className="w-3 h-3" /> {t('debt.solution')}
                           </h5>
                           <p className="font-mono text-xs text-gray-400">{debt.solution}</p>
                         </div>
                       )}
 
-                      {/* Affected Files */}
+                      {/* Archivos Afectados */}
                       {debt.affected_files && debt.affected_files.length > 0 && (
                         <div>
-                          <h5 className="font-mono text-[10px] text-gray-600 tracking-wider mb-2"># AFFECTED FILES</h5>
+                          <h5 className="font-mono text-[10px] text-gray-600 tracking-wider mb-2"># {t('debt.affectedFiles')}</h5>
                           <div className="flex flex-wrap gap-2">
                             {debt.affected_files.map((file, idx) => (
                               <code key={idx} className="font-mono text-[11px] px-2 py-1 bg-black/50 border border-white/10 text-cyber">
@@ -3789,19 +3853,19 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
                       {/* Metadata Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div className="bg-black/30 p-3 border border-white/5">
-                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">FEATURE</div>
+                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">{t('debt.feature')}</div>
                           <div className="font-mono text-xs text-white truncate">{debt.featureName}</div>
                         </div>
                         <div className="bg-black/30 p-3 border border-white/5">
-                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">TASK</div>
+                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">{t('debt.task')}</div>
                           <div className="font-mono text-xs text-white truncate">{debt.taskName}</div>
                         </div>
                         <div className="bg-black/30 p-3 border border-white/5">
-                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">EFFORT</div>
-                          <div className="font-mono text-xs text-signal">{debt.estimated_effort || 'Not estimated'}</div>
+                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">{t('debt.effort')}</div>
+                          <div className="font-mono text-xs text-signal">{debt.estimated_effort || t('debt.notEstimated')}</div>
                         </div>
                         <div className="bg-black/30 p-3 border border-white/5">
-                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">PRIORITY</div>
+                          <div className="font-mono text-[9px] text-gray-600 tracking-wider mb-1">{t('debt.priority')}</div>
                           <div className={`font-mono text-xs ${
                             debt.priority === 'critical' ? 'text-alert' :
                             debt.priority === 'high' ? 'text-signal' :
@@ -3813,16 +3877,16 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
                       {/* Additional Info */}
                       <div className="flex items-center gap-4 pt-3 border-t border-white/5 font-mono text-[10px] text-gray-600 flex-wrap">
                         {debt.created_at && (
-                          <span>Created: {new Date(debt.created_at).toLocaleDateString()}</span>
+                          <span>{t('debt.created')}: {new Date(debt.created_at).toLocaleDateString()}</span>
                         )}
                         {debt.resolved_at && (
-                          <span className="text-matrix">Resolved: {new Date(debt.resolved_at).toLocaleDateString()}</span>
+                          <span className="text-matrix">{t('debt.resolvedAt')}: {new Date(debt.resolved_at).toLocaleDateString()}</span>
                         )}
                         {debt.assigned_to && (
-                          <span className="text-signal">Assigned: @{debt.assigned_to}</span>
+                          <span className="text-signal">{t('debt.assigned')}: @{debt.assigned_to}</span>
                         )}
                         {debt.due_date && (
-                          <span className="text-alert">Due: {new Date(debt.due_date).toLocaleDateString()}</span>
+                          <span className="text-alert">{t('debt.due')}: {new Date(debt.due_date).toLocaleDateString()}</span>
                         )}
                       </div>
 
@@ -3861,7 +3925,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
         <div className="theme-card p-12 text-center">
           <CheckCircle2 className="w-10 h-10 mx-auto mb-4 text-matrix" />
           <p className="font-mono text-sm text-gray-600">
-            {allDebts.length === 0 ? 'NO TECHNICAL DEBT REGISTERED' : 'NO ITEMS MATCH FILTERS'}
+            {allDebts.length === 0 ? t('debt.noDebt') : t('debt.noMatch')}
           </p>
           {allDebts.length === 0 && (
             <button
@@ -3869,7 +3933,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
               className="theme-btn-primary mt-4 inline-flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              ADD FIRST DEBT
+              {t('debt.addFirstDebt')}
             </button>
           )}
         </div>
@@ -3879,7 +3943,7 @@ function DebtTab({ roadmap, setRoadmap, setHasChanges }) {
       <div className="theme-card p-4">
         <details>
           <summary className="font-mono text-[10px] text-gray-600 cursor-pointer hover:text-white">
-            JSON SCHEMA FOR TECHNICAL DEBT
+            {t('debt.jsonSchema')}
           </summary>
           <pre className="mt-4 p-4 bg-void-100 border border-white/5 font-mono text-[10px] text-gray-500 overflow-x-auto">
 {`{

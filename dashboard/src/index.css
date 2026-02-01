@@ -220,6 +220,18 @@
    COMPONENT STYLES
    ============================================ */
 @layer components {
+  /* Card Dark - Base component for dark cards */
+  .card-dark {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+  }
+
+  .card-dark:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-color-strong);
+  }
+
   /* Card */
   .theme-card {
     background: var(--bg-card);
@@ -513,6 +525,263 @@
   .theme-progress,
   .theme-progress-fill {
     border-radius: 9999px;
+  }
+
+  /* ========== GLASS CARD OVERRIDES ========== */
+  .card-dark {
+    background: var(--bg-card) !important;
+    backdrop-filter: var(--backdrop-blur);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-dark:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ========== GLASS TYPOGRAPHY OVERRIDES ========== */
+  /* Use clean sans-serif for most UI elements instead of monospace */
+  /* This creates a modern, clean aesthetic while preserving code blocks */
+
+  /* MASTER OVERRIDE: All font-mono elements use body font (except code) */
+  .font-mono {
+    font-family: var(--font-body) !important;
+    letter-spacing: -0.01em !important;
+  }
+
+  /* PRESERVE: Keep monospace ONLY for actual code elements */
+  code,
+  pre,
+  pre *,
+  code *,
+  .code-block,
+  .code-block *,
+  [data-code],
+  [data-code] *,
+  kbd,
+  .theme-input code,
+  textarea.font-mono,
+  pre.font-mono,
+  code.font-mono {
+    font-family: var(--font-mono) !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* Override font-display to use heading font with semi-bold weight */
+  .font-display {
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Remove terminal-style wide tracking (creates cleaner look) */
+  .tracking-wider,
+  .tracking-widest {
+    letter-spacing: 0.01em !important;
+  }
+
+  /* Uppercase labels - refined appearance */
+  .uppercase {
+    font-weight: 600 !important;
+    letter-spacing: 0.03em !important;
+  }
+
+  /* Headings and titles - use heading font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Large text classes - heading font */
+  .text-xl,
+  .text-2xl,
+  .text-3xl,
+  .text-4xl,
+  .text-lg {
+    font-family: var(--font-heading) !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Stats and numbers - use tabular figures for alignment */
+  .font-display.text-lg,
+  .font-display.text-xl,
+  .font-display.text-2xl,
+  .font-display.text-3xl,
+  .font-display.text-4xl {
+    font-variant-numeric: tabular-nums !important;
+    font-weight: 700 !important;
+  }
+
+  /* Buttons - clean modern style with medium weight */
+  button,
+  .btn,
+  [role="button"] {
+    font-family: var(--font-body) !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+  }
+
+  /* Small text classes - body font with medium weight */
+  .text-xs,
+  .text-sm {
+    font-family: var(--font-body) !important;
+    font-weight: 500 !important;
+  }
+
+  /* Tiny text - slightly lighter */
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-\[9px\] {
+    font-family: var(--font-body) !important;
+    font-weight: 500 !important;
+  }
+
+  /* Section headers with # prefix - treat like titles */
+  h3.font-mono,
+  h4.font-mono {
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+  }
+
+  /* Table text - cleaner look */
+  table,
+  th,
+  td {
+    font-family: var(--font-body) !important;
+  }
+
+  /* Select and input elements */
+  select,
+  input,
+  textarea {
+    font-family: var(--font-body) !important;
+  }
+
+  /* Labels in forms */
+  label {
+    font-family: var(--font-body) !important;
+    font-weight: 500 !important;
+  }
+
+  /* Badges and pills - consistent styling */
+  .px-2.py-1,
+  .px-2\.5.py-1,
+  .px-2.py-0\.5,
+  .px-3.py-1,
+  .px-3.py-1\.5 {
+    font-family: var(--font-body) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+  }
+
+  /* Keyboard shortcuts - keep monospace */
+  kbd {
+    font-family: var(--font-mono) !important;
+    font-size: 0.75em !important;
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  /* Modal and dialog headings */
+  [role="dialog"] h2,
+  [role="dialog"] h3,
+  [role="alertdialog"] h2,
+  [role="alertdialog"] h3 {
+    font-family: var(--font-heading) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.02em !important;
+  }
+
+  /* Remove Matrix-style effects */
+  .crt-glow,
+  .text-glow,
+  .glow-matrix {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Replace glow with subtle shadow */
+  .glow-matrix {
+    box-shadow: var(--shadow-md) !important;
+  }
+
+  /* Softer colors for gray text - use theme variables */
+  .text-gray-600 {
+    color: var(--text-muted) !important;
+  }
+
+  .text-gray-500 {
+    color: var(--text-secondary) !important;
+  }
+
+  .text-gray-400 {
+    color: var(--text-secondary) !important;
+  }
+
+  .text-gray-700,
+  .text-gray-800 {
+    color: var(--text-muted) !important;
+  }
+
+  /* Status text colors - use CSS variables for consistency */
+  .text-matrix {
+    color: var(--accent-primary) !important;
+  }
+
+  .text-cyber {
+    color: var(--accent-tertiary) !important;
+  }
+
+  .text-signal {
+    color: var(--accent-secondary) !important;
+  }
+
+  .text-alert {
+    color: var(--accent-danger) !important;
+  }
+
+  /* Border colors - softer in Glass theme */
+  .border-matrix\/30,
+  .border-matrix\/20,
+  .border-matrix\/50 {
+    border-color: color-mix(in srgb, var(--accent-primary) 20%, var(--border-color)) !important;
+  }
+
+  .border-cyber\/30,
+  .border-cyber\/20 {
+    border-color: color-mix(in srgb, var(--accent-tertiary) 20%, var(--border-color)) !important;
+  }
+
+  .border-signal\/30,
+  .border-signal\/20 {
+    border-color: color-mix(in srgb, var(--accent-secondary) 20%, var(--border-color)) !important;
+  }
+
+  /* Background tints - very subtle */
+  .bg-matrix\/5,
+  .bg-matrix\/10 {
+    background: color-mix(in srgb, var(--accent-primary) 5%, var(--bg-card)) !important;
+  }
+
+  .bg-cyber\/5,
+  .bg-cyber\/10 {
+    background: color-mix(in srgb, var(--accent-tertiary) 5%, var(--bg-card)) !important;
+  }
+
+  .bg-signal\/5,
+  .bg-signal\/10 {
+    background: color-mix(in srgb, var(--accent-secondary) 5%, var(--bg-card)) !important;
+  }
+
+  /* void backgrounds - use theme card color */
+  .bg-void-100 {
+    background: var(--bg-secondary) !important;
+  }
+
+  /* White text - use theme primary */
+  .text-white {
+    color: var(--text-primary) !important;
   }
 }
 

@@ -28,11 +28,11 @@ export default function TechnicalDebt({ roadmap = {} }) {
   if (allDebts.length === 0) {
     return (
       <div className="card-dark rounded-2xl p-12 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
-          <TrendingDown className="w-8 h-8 text-emerald-400" />
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-matrix/10 flex items-center justify-center">
+          <TrendingDown className="w-8 h-8 text-matrix" />
         </div>
-        <h3 className="text-lg font-semibold text-emerald-400 mb-2">Sin deuda tecnica</h3>
-        <p className="text-gray-500 text-sm">No hay deuda tecnica registrada</p>
+        <h3 className="text-lg font-semibold text-matrix mb-2">Sin deuda técnica</h3>
+        <p className="text-theme-secondary text-sm">No hay deuda técnica registrada</p>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export default function TechnicalDebt({ roadmap = {} }) {
 
       {/* Distribution Bar */}
       <div className="card-dark rounded-2xl p-6">
-        <h3 className="text-sm text-gray-500 uppercase tracking-wider mb-4">Distribucion</h3>
+        <h3 className="text-sm text-theme-secondary uppercase tracking-wider mb-4">Distribución</h3>
         <div className="flex h-4 rounded-full overflow-hidden bg-white/5">
           {grouped.high.length > 0 && (
             <div
@@ -92,7 +92,7 @@ function StatCard({ label, value, gradient, icon: Icon }) {
     <div className="card-dark rounded-2xl p-5 hover:scale-[1.02] transition-all">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+          <p className="text-xs text-theme-muted uppercase tracking-wider mb-1">{label}</p>
           <p className={`text-3xl font-bold bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>{value}</p>
         </div>
         <Icon className={`w-8 h-8 opacity-50 bg-gradient-to-r ${gradient} bg-clip-text`} style={{ color: 'currentColor' }} />
@@ -105,6 +105,7 @@ function DebtSection({ severity, debts }) {
   const config = {
     high: {
       title: 'Severidad Alta',
+      label: 'Alta',
       textColor: 'text-rose-400',
       bgColor: 'bg-rose-500/5',
       borderColor: 'border-rose-500/20',
@@ -112,6 +113,7 @@ function DebtSection({ severity, debts }) {
     },
     medium: {
       title: 'Severidad Media',
+      label: 'Media',
       textColor: 'text-amber-400',
       bgColor: 'bg-amber-500/5',
       borderColor: 'border-amber-500/20',
@@ -119,6 +121,7 @@ function DebtSection({ severity, debts }) {
     },
     low: {
       title: 'Severidad Baja',
+      label: 'Baja',
       textColor: 'text-cyan-400',
       bgColor: 'bg-cyan-500/5',
       borderColor: 'border-cyan-500/20',
@@ -149,17 +152,17 @@ function DebtSection({ severity, debts }) {
                 <AlertTriangle className={`w-5 h-5 ${cfg.textColor}`} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white font-medium mb-2">{debt.description}</p>
+                <p className="text-theme-primary font-medium mb-2">{debt.description}</p>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                  <span className="text-gray-500">Feature: <span className="text-blue-400">{debt.featureName}</span></span>
-                  <span className="text-gray-500">Tarea: <span className="text-cyan-400">{debt.taskName}</span></span>
-                  <span className="flex items-center gap-1 text-gray-500">
+                  <span className="text-theme-muted">Característica: <span className="text-cyber">{debt.featureName}</span></span>
+                  <span className="text-theme-muted">Tarea: <span className="text-cyber">{debt.taskName}</span></span>
+                  <span className="flex items-center gap-1 text-theme-muted">
                     <Clock className="w-3.5 h-3.5" /> {debt.estimated_effort}
                   </span>
                 </div>
               </div>
               <span className={`flex-shrink-0 px-2.5 py-1 text-[10px] font-bold text-white rounded-full uppercase tracking-wider ${cfg.badgeBg}`}>
-                {severity}
+                {cfg.label}
               </span>
             </div>
           </div>

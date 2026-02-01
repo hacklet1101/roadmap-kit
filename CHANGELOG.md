@@ -5,6 +5,26 @@ All notable changes to ROADMAP-KIT will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-02-01
+
+### Fixed
+
+- **Glass Theme Typography Consistency**: Unified typography across all pages (Setup, Help, Config, Info)
+  - All UI elements now use clean sans-serif fonts (Inter) instead of monospace
+  - Code blocks and `<pre>` elements preserve monospace styling
+  - Consistent font weights: headings 600, body 500
+  - Removed terminal-style wide letter spacing for cleaner appearance
+- **Theme Color Variables**: Mapped hardcoded colors to CSS variables for proper theme adaptation
+  - `text-white`, `text-gray-*` colors now use theme-aware variables
+  - Background tints (`bg-matrix/*`, `bg-cyber/*`) properly blend with theme
+  - Border colors softer in Glass theme
+- **Technical Debt Page i18n**: Changed nav label from "DEUDA" to "DEUDA TÉCNICA"
+
+### Changed
+
+- Glass theme now properly applies clean typography to all dashboard tabs
+- Improved readability with refined letter spacing and font weights
+
 ## [1.0.2] - 2026-02-01
 
 ### Added

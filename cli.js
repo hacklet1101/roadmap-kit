@@ -1066,7 +1066,7 @@ networks:
 program
   .name('roadmap-kit')
   .description('Sistema de gestión de proyectos optimizado para Vibe Coding (programación asistida por IA)')
-  .version('1.0.2');
+  .version('1.0.3');
 
 // Init command
 program
